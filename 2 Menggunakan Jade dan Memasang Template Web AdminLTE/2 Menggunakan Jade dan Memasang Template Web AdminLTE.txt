@@ -1,0 +1,24 @@
+REFF :
+https://www.codepolitan.com/memulai-pembuatan-aplikasi-web-dengan-express-js-2-menggunakan-jade-dan-memasang-template-web-adminlte
+
+Lanjut ke bagian kedua, kali ini kita akan fokus memasang web template yang terkenal untuk halaman admin yaitu AdminLTE. Sebelum melangkah ke teknik lainnya, teknik ini akan kita dahulukan karena target dari tutorial ini adalah membuat sebuah aplikasi web yang dapat digunakan. Sepanjang tutorial ini, kita akan membangun sebuah aplikasi bernama Organo. Sebuah aplikasi yang dapat membantu kita mencatat anggota berdasarkan divisi dan jabatan dari organisasi yang kita kelola. Aplikasi ini cocok untuk pengurus badan eksekutif mahasiswa, anggota dewan keluarga masjid, aktivis lingkungan skala kecil dan lainnya.
+
+Sebagai awalan, aplikasi ini membutuhkan beberapa hal berikut:
+
+    web template AdminLTE
+    font library FontAwesome
+    Mongoose
+    MongoDB
+    Berbagai package pendukung untuk Express.js seperti express-session, express-flash, express-validator, dan lainnya
+
+Namun kita akan fokus terlebih dahulu pada pemasangan web template AdminLTE sebelum melangkah ke bagian tutorial lainnya. Selamat mencoba :D.
+
+BAGIAN  2
+===================
+1. $ npm install express -g
+$ express demo
+$ cd demo
+$ npm install
+$ npm start
+
+2. 
