@@ -1,0 +1,432 @@
+Express.js adalah satu web framework paling populer di dunia Node.js. Dokumentasinya yang lengkap dan penggunaannya yang cukup mudah, dapat membuat kita mengembangkan berbagai produk seperti aplikasi web ataupun RESTful API. Express.js pun dapat digunakan menjadi pijakan untuk membangun web framework yang lebih kompleks seperti, Sails.js, MEAN (MongoDB, Express.js, Angular.js, Node.js) dan MERN (MongoDB, Express.js, React.js, Node.js). Express.js dibuat oleh TJ Holowaychuk dan sekarang dikelola oleh komunitas.
+
+Beberapa keunggulan yang dimiliki oleh Express.js antara lain:
+
+    Dukungan pembuatan middleware
+    Dukungan terhadap berbagai HTTP verb seperti POST, GET, PUT, DELETE, OPTION, HEAD, dan lainnya
+    Sudah terpasang template engine Jade
+    manajemen file statik seperti CSS dan Javascript
+    Sangat bebas untuk dikostumisasi
+
+Di tutorial bagian pertama ini, Anda akan mengenal bagaimana cara kita menggunakan Express.js yang paling dasar dan berbagai teknik dasar yang akan kita pelajari untuk membuat sebuah aplikasi web. Selamat menikmati tutorial ini :D.
+
+1. Instalasi
+
+Untuk menggunakan Express.js, pastikan Anda memasang Node.js terlebih dahulu dan pastikan NPM sudah dapat digunakan. Tutorial ini dibuat dengan menggunakan Node.js versi 5.10.1 dan NPM versi 3.8.5. Melalui konsol atau terminal silahkan eksekusi perintah berikut. Pastikan pilih folder yang Anda sukai:
+
+$ npm install express -g
+$ express demo
+$ cd demo
+$ npm install
+$ npm start
+
+2. Sekarang mari kita lihat halaman pertama yang dihasilkan oleh Express.js di web browser. Silahkan akses URL http://localhost:3000/, bentuknya akan seperti ini:
+
+3. Melihat Struktur Folder Express.js
+
+Saat pertama kali dibuat, Express.js memiliki struktur folder seperti berikut:
+
+    bin, di dalamnya terdapat sebuah file yang bernama www dimana file tersebut akan dieksekusi saat menjalankan perintah "npm start"
+    node_modules, di dalamnya terdapat berbagai folder library - library Node.js yang dipasang melalui node package manager atau NPM
+    public, kita dapat menaruh berbagai file CSS, Javascript, atau gambar di dalam folder ini.
+    routes, di dalamnya terdapat berbagai file yang berisi action yang diterima oleh routing yang kita definisikan. Dapat menerima request berupa GET, POST, PUT, DELETE, OPTION, dan HEAD
+    views, di dalamnya terdapat berbagai file jade atau html yang digunakan oleh routes untuk menampilkan halaman
+    app.js, file utama Express.js yang berisi penggunaan package utama dan konfigurasi utama
+    npm-debug.log, file yang berisi hasil debug atau error yang dicatat oleh Express.js selama running
+    package.json, berisi struktur JSON yang mendefinisikan profil proyek dan dependensi paket apa saja yang dibutuhkan aplikasi yang kita kembangkan. NPM akan melacak dependensi dengan melihat file ini
+
+
+4. Melihat File - File Penting Express.js
+
+Sekarang mari kita intip contoh isi file app.js. Di dalamnya Anda akan melihat penggunaan library tertentu dengan menggunakan require() kemudian memasangnya di Express.js dengan menggunakan use(), kemudian untuk mengatur variabel global digunakan set():
+
+/////////////////////////////////////////////////////////////
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', routes);
+app.use('/users', users);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+  res.status(err.status || 500);
+  res.render('error', {
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+
+//////////////////////////////////////////////////////////////
+
+
+CATATAN :
+
+
+APA ITU VARIABEL GLOBAL
+=========================
+Variabel global merupakan variabel yang dapat digunakan atau dipanggil oleh semua fungsi. Variabel global ini juga dapat digunakan jika ada variabel yang digunakan pada beberapa fungsi/prosedur. Hal ini betujuan untuk menghemat penulisan, karena tidak perlu lagi berkali – kali menuliskan variabel yang sama pada beberapa fungsi/prosedur.
+
+
+APA ITU VARIABEL LOKAL
+=========================
+Sedangkan variabel lokal adalah variabel yang hanya dapat digunakan atau dipanggil dalam satu prosedur saja. Variabel lokal ini hanya dikenal oleh fungsi tempat variabel tersebut dideklarasikan dan tidak ada inisialisasi secara otomatis (saat variabel dibuat, nilainya tidak menentu).
+
+REFF :
+http://www.uwidigital.com/2016/06/php-penggunaan-variable-global-local-dan-static/
+
+Jenis Variable : 
+    Variable Scope Global
+    Variable Scope Local
+    Variable Scope Global Keyword
+    Variable Scope Static
+
+5. Lanjut, kita lihat juga isi file dari package.json yang didalamnya terdapat konfigurasi file mana yang akan dieksekusi oleh "npm start", kemudian ada juga daftar dependency yang digunakan oleh aplikasi yang kita kembangkan beserta versinya:
+
+isi package.json :
+
+{
+  "name": "demo",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "~1.13.2",
+    "cookie-parser": "~1.3.5",
+    "debug": "~2.2.0",
+    "express": "~4.13.1",
+    "jade": "~1.11.0",
+    "morgan": "~1.6.1",
+    "serve-favicon": "~2.3.0"
+  }
+}
+
+
+6. Sedangkan file bin/www berisi kode untuk menjalankan aplikasi dengan default port dan konfigurasi informasi lainnya saat runtime:
+
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('demo:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
+
+
+6. Mengenal Template Engine Jade
+- Misal kita temukan sebuah file bernama layout.jade:
+
+doctype html
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/style.css')
+  body
+    block content
+
+
+- Kemudian layout tersebut digunakan oleh index.jade:
+
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+
+7. Maka bila kita bayangkan, hasilnya akan menjadi seperti ini namun tanpa harus mengetik ulang bagian tertentu di file berbeda yang menggunakan layout.jade:
+
+doctype html
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/style.css')
+  body
+    h1= title
+    p Welcome to #{title}
+
+
+
+ Templating dengan menggunakan Jade mungkin agak aneh dan tidak lazim, karena kita tidak menggunakan penutup atau pembuka tag HTML. Untuk menyatakan bahwa sebuah elemen berada di dalam elemen lain, kita berikan dahulu satu tab dibawah elemen yang akan berisi elemen lain. Kemudian ada sintaks extends dan block yang berarti bahwa kita menggunakan template layout.jade sebagai wadah untuk index.jade. Lalu Jade akan mencari posisi block content dan mengisinya dengan elemen yang ada di index.jade.
+
+
+ 8. untuk mencetak variabel kita gunakan 
+ 
+ sintaks #{nama_variabel}. 
+
+ Sedangkan untuk menggunakan atribut HTML pada suatu elemen, kita gunakan tanda 
+
+ "(" dan ")"
+
+ dengan mengisi atribut yang akan digunakan. 
+ Sebagai contoh mari kita lihat contoh berikut:
+
+
+// contoh 1
+html:
+
+<h1>Hello World</h1>
+
+jade:
+
+h1 Hello World
+
+// contoh 2
+html:
+
+<table id="table-mahasiswa" class="table table-hovered" border="1" style="display:inline-block;padding:50px;">
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>hello</td>
+            <td>world</td>
+        </tr>
+    </tbody>
+</table>
+
+jade:
+
+table(border="1", style="display:inline-block;padding:50px;")#table-mahasiswa.table.table-hovered
+    tbody
+        tr
+            td 1
+            td hello
+            td world
+
+- Untuk memudahkan pembuatan file Jade, Anda dapat menggunakan konverter http://html2jade.com tapi tentu saja hasil konversinya harus diperiksa dahulu, karena Jade sangat sensitif terhadap perbedaan penggunaan spasi dan tab. Jade mengharuskan kita hanya menggunakan salah satu jenis tab apakah hanya menggunakan spasi atau tab. Tidak boleh dicampur.
+
+9. Routing di Express.js
+OK, sekarang kita coba buka file index.js yang ada di folder routes:
+
+var express = require('express');
+var router = express.Router();
+
+/* DEMO 0 - halaman index */
+router.get('/', function(req, res, next) {
+  res.render('index', { title: 'Express' });
+});
+
+
+module.exports = router;
+
+
+Anda dapat melihat dalam setiap file routes harus menggunakan modul Express.js terlebih dahulu, kemudian membuat instance Router() dan barulah kita dapat mendefinisikan URL apa lalu ditangani oleh aksi apa. Aksi yang kita lewatkan ke dalam routes harus menerima variabel request, response, dan next. Anda dapat menampilkan template Jade yang ada di folder views dengan menggunakan render() yang dimiliki oleh objek response. Pada kode diatas, objek response ditangkap oleh parameter res, maka kita panggil render() melalui res.render() kemudian tentukan file* Jade mana yang akan kita tampilkan, dan kita dapat melewatkan beberapa variabel dengan diapit tanda "{" dan "}".
+
+
+Untuk route ini, file index.jade akan ditampilkan dan diberikan sebuah nilai berupa title yang berisi "Express":
+
+
+extends layout
+
+block content
+  h1= title
+  p Welcome to #{title}
+
+
+10. Mengirim Variabel ke Template
+
+Masih di file index.js. Sekarang kita coba tambah parameter yang dilewatkan ke sebuah template bernama demo1.jade. Kita akan melewatkan sebuah pesan bernama message dan sebuah objek bernama user:
+
+/* DEMO 1 - render template */
+router.get('/demo1', function(req, res, next) {
+  res.render(
+                'demo1', 
+                { 
+                    message: 'Lorem ipsum sit dolor amet', 
+                    user: {name:'suyono', email:'suyono@example.com', website: 'http://www.suyono.com'} 
+                }
+            );
+});
+
+
+Seperti yang Anda lihat, kita lewatkan dua buah variabel dan variabel user memiliki struktur lebih detail di dalamnya. Bila akan kita tampilkan di demo1.jade maka kodenya akan seperti berikut:
+
+extends layout
+
+block content
+  p message: #{message}
+  p user.name: #{user.name}
+  p user.email: #{user.email}
+  p user.website: #{user.website}
+
+
+ 11. Bila kita akses url http://localhost:3000/demo1 maka akan muncul
+ 12. Menerima Parameter URL
+
+ - Masih di file index.js. Sekarang kita coba lagi teknik lainnya yang cukup penting. Kita akan menggunakan parameter URL dalam sebuah route. Untuk menandai bahwa sebuah segmen adalah parameter maka harus kita kurung dengan tanda 
+
+ "(:" dan ")" 
+
+ - barulah didalamnya tulis nama parameternya. Untuk menangkapnya di dalam kode, Anda dapat memanggil 
+
+ req.params.nama_variabel 
+
+ sesuai dengan nama parameter yang ditentukan:
+
+/* DEMO 2 - parameter di URL */
+router.get('/demo2/(:id)/(:category)', function (req, res, next){
+    res.render('demo2', 
+                        { 
+                            id: req.params.id, 
+                            category: req.params.category, 
+                        }
+                );
+});
+
+- Sekarang akan kita tampilkan di file demo2.jade. Buat file tersebut di dalam folder views:
+
+extends layout
+
+block content
+  p id: #{id}
+  p category: #{category}
+
+
+- Bila kita akses url http://localhost:3000/demo2/1/food maka akan muncul tampilan berikut:
+
+13. Menampilkan Response JSON
+- Masih di file index.js. Tidak berbeda jauh dengan menampilkan sebuah file template. Sekarang kita akan tampilkan langsung sebuah objek Javascript dan ditampilkan sebagai response JSON dengan menggunakan json():
+
+/* DEMO 3 - menampilkan respon JSON */
+router.get('/demo3', function(req, res, next) {
+  res.json({ 
+                message: 'Lorem ipsum sit dolor amet', 
+                user: {name:'suyono', email:'suyono@example.com', website: 'http://www.suyono.com'} 
+        });
+});
+
+- Bila kita akses url http://localhost:3000/demo3 maka akan muncul tampilan jsonnya
+
+
+14. Menerima Request POST
+
+- Masih di file index.js. Sekarang kita akan mencoba menampilkan sebuah form dan mengirimnya melalui metode POST. Pertama kita buat dahulu route untuk menampilkan form. Kemudian buatlah route untuk menangkap hasil kiriman POST:
