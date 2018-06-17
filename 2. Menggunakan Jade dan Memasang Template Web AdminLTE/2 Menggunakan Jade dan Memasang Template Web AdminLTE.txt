@@ -1,0 +1,260 @@
+REFF :
+https://www.codepolitan.com/memulai-pembuatan-aplikasi-web-dengan-express-js-2-menggunakan-jade-dan-memasang-template-web-adminlte
+
+Lanjut ke bagian kedua, kali ini kita akan fokus memasang web template yang terkenal untuk halaman admin yaitu AdminLTE. Sebelum melangkah ke teknik lainnya, teknik ini akan kita dahulukan karena target dari tutorial ini adalah membuat sebuah aplikasi web yang dapat digunakan. Sepanjang tutorial ini, kita akan membangun sebuah aplikasi bernama Organo. Sebuah aplikasi yang dapat membantu kita mencatat anggota berdasarkan divisi dan jabatan dari organisasi yang kita kelola. Aplikasi ini cocok untuk pengurus badan eksekutif mahasiswa, anggota dewan keluarga masjid, aktivis lingkungan skala kecil dan lainnya.
+
+Sebagai awalan, aplikasi ini membutuhkan beberapa hal berikut:
+
+    web template AdminLTE
+    font library FontAwesome
+    Mongoose
+    MongoDB
+    Berbagai package pendukung untuk Express.js seperti express-session, express-flash, express-validator, dan lainnya
+
+Namun kita akan fokus terlebih dahulu pada pemasangan web template AdminLTE sebelum melangkah ke bagian tutorial lainnya. Selamat mencoba :D.
+
+BAGIAN  2
+===================
+1. $ npm install express -g
+$ express demo
+$ cd demo
+$ npm install
+$ npm start
+
+2. Meletakkan aset statis di folder public
+- download template https://dl.dropboxusercontent.com/u/54840757/picture/codepolitan/assets-organo-public.zip
+- lalu extract di demo/public
+*public/adminlte
+*public/images
+*public/javascripts
+*public/stylesheets
+
+3. buat folder layout di demo/views/layout
+
+nanti pada folder layout nantinya akan berisi bagian layout yang akan dipecah 
+menjadi beberapa bagian. Bagian tersebut antara lain:
+- base.jade, bagian utama dari layout yang akan digunakan oleh template di folder lain
+- head.jade, bagian kepala layout dimana di dalamnya terdapat tag penggunaan aset statis CSS
+- nav.jade, bagian navigasi halaman Admin berupa dropdown menu
+- sidebar.jade, bagian navigasi halaman Admin berupa slider menu
+- footer.jade, bagian kaki dari layout
+- js.jade, bagian kaki yang berisi tag penggunaan aset statis Javascript
+
+4. Membuat template base.jade 
+- buat file base.jade di demo/views/layout/base.jade
+
+isikan : 
+
+doctype html
+html
+    head
+        include head.jade
+    body.hold-transition.skin-blue.sidebar-mini
+        div.wrapper
+            include nav.jade
+            include sidebar.jade
+
+            div.content-wrapper
+                block content
+            include footer.jade
+            div.control-sidebar-bg
+
+        include js.jade
+
+
+# Di dalamnya terdapat penggunaan template lain dengan menggunakan keyword include. 
+Penggunaan perintah include head.jade mempunyai arti bawah template head.jade yang 
+satu folder dengan base.jade akan digunakan oleh base.jade. Kemudian ada juga block 
+content yang artinya setiap template lain yang menggunakan base.jade dan yang memiliki 
+block content maka elemen dibawah tag tersebut akan ditempatkan di bagian block content 
+yang ada di base.jade.
+
+5. Membuat template head.jade
+- Sekarang kita akan membuat template anak yaitu head.jade. 
+Di dalamnya hanya terdapat penggunaan berbagai file CSS 
+yang digunakan oleh web template AdminLTE:
+
+#isikan head.jade :
+
+title= Organo
+link(rel='stylesheet', href='/adminlte/bootstrap/css/bootstrap.min.css')
+link(rel='stylesheet', href='/font-awesome/css/font-awesome.css')
+link(rel='stylesheet', href='/adminlte/dist/css/AdminLTE.min.css')
+link(rel='stylesheet', href='/adminlte/dist/css/skins/skin-blue.min.css')
+link(rel='stylesheet', href='/adminlte/plugins/iCheck/square/blue.css')
+
+- Pastikan bahwa Anda sudah memasang folder AdminLTE dan Font Awesome di folder demo/public.
+
+6. Membuat template nav.jade
+- Sekarang kita akan membuat template anak yaitu nav.jade. Di dalamnya hanya terdapat pendefinisian menu 
+popup yang akan menyimpan tombol edit profil dan tombol keluar serta menampilkan poto 
+profil dari user yang login:
+
+# isi dari nav.jade :
+
+header.main-header
+    a(href='/').logo
+        span.logo-mini
+        span.logo-lg
+            b Organo
+    nav(role='navigation').navbar.navbar-static-top
+        a(href='#', role='button', data-toggle='offcanvas').sidebar-toggle
+            span.sr-only Toggle Navigation
+        div.navbar-custom-menu
+            ul.navbar-nav.nav
+                li.dropdown.user.user-menu
+                    a(href="#", data-toggle='dropdown').dropdown-toggle
+                        img.user-image(src='/adminlte/dist/img/avatar.png', alt='User Image')
+                        span.hidden-xs Muhammad Arslan
+                    ul.dropdown-menu
+                        li.user-header
+                            img.img-circle(src='/adminlte/dist/img/avatar.png', alt='User Image')
+                            p
+                                | Muhammad Arslan
+                        li.user-footer
+                            div.pull-left
+                                a.btn.btn-default.btn-flat(href='/profil/') Profil
+                            div.pull-right
+                                a.btn.btn-default.btn-flat(href='/logout/') Keluar
+                li
+                    div(style='margin-right:25px;')
+
+7. Membuat template sidebar.jade
+- Sekarang kita akan membuat template anak yaitu sidebar.jade. 
+Di dalamnya hanya terdapat pendefinisian menu slide yang akan menyimpan 
+berbagai menu untuk area admin dan area member. Menu yang tersedia terdiri dari 
+"Data Master", "Keanggotaan", dan "Pengaturan untuk area admin. Sedangkan untuk 
+area member hanya ada menu "Keanggotaan":
+
+
+# isi dari sidebar.jade :
+
+aside.main-sidebar
+    section.sidebar
+        ul.sidebar-menu
+            li.header Admin Area
+                li.treeview
+                    a(href='#')
+                        i.fa.fa-table
+                        span Data Master
+                        span.pull-right-container
+                            i.fa.fa-angle-left.pull-right
+                    ul.treeview-menu
+                        li
+                            a(href='#') Divisi
+                        li
+                            a(href='#') Jabatan
+                li.treeview
+                    a(href='#')
+                        i.fa.fa-table
+                        span Keanggotaan
+                        span.pull-right-container
+                            i.fa.fa-angle-left.pull-right
+                    ul.treeview-menu
+                        li
+                            a(href='#') Anggota
+                        li
+                            a(href='#') Kontribusi
+                li.treeview
+                    a(href='#')
+                        i.fa.fa-linkrendering
+                        span Pengaturan
+                        span.pull-right-container
+                            i.fa.fa-angle-left.pull-right
+                    ul.treeview-menu
+                        li
+                            a(href='/users') Pengguna
+                        li
+                            a(href='#') Tampilan
+                        li
+                            a(href='#') Backup Database
+            li.header Member Area
+                li.treeview
+                    a(href='#')
+                        i.fa.fa-table
+                        span Keanggotaan
+                        span.pull-right-container
+                            i.fa.fa-angle-left.pull-right
+                    ul.treeview-menu
+                        li
+                            a(href='#') Profil
+                        li
+                            a(href='#') Kontribusi
+
+
+8. Membuat template footer.jade
+- Lalu kita akan membuat template anak yaitu footer.jade. Di daldamnya 
+hanya terdapat pendefinisian footer untuk aplikasi web yang akan kita bangun:
+
+
+# isi dari footer.jade :
+footer.main-footer
+    div.pull-right.hidden-xs Pengelola Anggota Organisasi Anda
+    strong Copyright &copy; 2016 
+        a(href="#") Codepolitan 
+    | All rights reserved.
+
+9. Membuat template js.jade
+
+- Terakhir kita buat sebuah template anak bernama js.jade 
+dimana didalamnya terdapat penggunaan file statis Javascript yang dibutuhkan oleh AdminLTE:
+
+# isi dari js.jade :
+
+script(type='text/javascript', src='/adminlte/plugins/jQuery/jQuery-2.1.3.min.js')
+script(type='text/javascript', src='/adminlte/bootstrap/js/bootstrap.min.js')
+script(type='text/javascript', src='/adminlte/dist/js/app.min.js')
+script(type='text/javascript', src='/adminlte/plugins/iCheck/icheck.min.js')
+
+10. Membuat template index.jade di views/index.jade atau jika sudah ada ubah isi dari views/index.jade dengan
+source code dibawah.
+
+- Sekarang mari kita coba membuat sebuah halaman admin dengan gaya AdminLTE. 
+Tentu saja kita gunakan base.jade yang sudah kita susun sebelumnya:
+
+# ubah isi dari index.jade dengan code dibawah ini : 
+
+extends layout/base
+block content  
+    section.content-header
+        h1
+            | Hello World
+            small This is a hello world page
+        ol.breadcrumb
+            li
+                a(href='#')
+                    i.fa.fa-dashboard
+                    |  Level
+            li.active Here
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Hi, Coders
+                    // /.box-header
+                    .box-body
+                        p Welcome to #{title}
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+
+## 
+Seperti yang anda lihat, pada saat menggunakan extends, otomatis kita harus memanggil file base.jade 
+dengan diawali nama folder dimana dia disimpan. Maka penggunaannya menjadi extends layout/base. 
+Sedangkan untuk elemen yang akan ditempatkan di base.jade, kita harus tempatkan dibawah block content.
+
+11. npm start
+localhost:30000
+
+## PENJELASAN 
+Dengan menggunakan template engine seperti Jade, diharapkan kita dapat membuat halaman 
+website yang dinamis dan reusable. Tentu saja akan berbeda ceritanya bila kita mengandalkan 
+clientside scripting seperit menggunakan Angular.js, React.js, atau Vue.js dimana proses layouting halaman 
+langsung dilakukan di sisi web browser. Template engine seperti Jade mengakomodasi web developer
+yang masih menggunakan cara konvensional dalam membangun halaman web namun ingin ditenagai oleh Node.js.

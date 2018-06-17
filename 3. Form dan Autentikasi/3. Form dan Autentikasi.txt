@@ -1,0 +1,644 @@
+REFF :
+https://www.codepolitan.com/memulai-pembuatan-aplikasi-web-dengan-express-js-3-form-dan-autentikasi
+
+Setelah puas berkutat dengan cara memasang template web AdminLTE di Express.js, 
+saatnya sekarang kita mencoba bagian yang cukup penting dalam membangun sebuah aplikasi 
+web khususnya dengan menggunakan Express.js. Autentikasi yang akan kita bangun masih 
+merupakan autentikasi dasar dimana diperlukan username dan password untuk login ke aplikasi. 
+Di tutorial ini kita akan menggunakan fitur - fitur yang dimiliki Express.js seperti middleware, 
+flash message, dan session. Selain itu kita juga akan menggunakan Mongoose untuk perantara Express.js 
+ke MongoDB.
+
+Di tutorial ini, Anda akan membuat model untuk collection user di MongoDB menggunakan Mongoose. 
+Kemudian Anda pun akan membuat sebuah form login dengan menggunakan template engine 
+Jade yang dipadu dengan AdminLTE. Terakhir, Anda akan membuat sebuah halaman rahasia 
+yang dapat dikunjungi oleh seseorang bila dapat lolos dari verifikasi yang dikerjakan oleh middleware.
+
+Ingat, karena tutorial ini menggunakan sistem template engine Jade, 
+Anda harus mengikuti terlebih dahulu bagian kedua dari tutorial ini di "Memulai Pembuatan 
+Aplikasi Web dengan Express.js (2): Menggunakan Jade dan Memasang Template Web AdminLTE". 
+Juga silahkan baca dahulu tutorial PDKT Dengan MongoDB.
+
+BAGIAN 3
+==========
+1. Persiapan
+- cd ke demo
+- $ npm install mongoose
+- $ npm install express-session
+- $ npm install express-flash
+
+2. Membuat Skema Model Mongoose untuk User
+
+Sebelum membuat kode untuk menciptakan collection User di MongoDB dengan menggunakan Mongoose, 
+pastikan Anda sudah memasang MongoDB di server atau laptop Anda. Karena bila belum terpasang, 
+maka Anda tidak dapat mengikuti tutorial ini dengan menyeluruh. Untuk mengawali tutorial ini 
+
+- buat sebuah folder dengan nama models dan buatlah sebuah file dengan nama user.js.
+
+- Sekarang silahkan buat kode berikut di dalam file demo/models/user.js:
+
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var userSchema = new Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  email: { type: String, required: true },
+  firstname: String,
+  lastname: String,
+  admin: Boolean,
+},
+{
+    timestamps: true
+});
+
+var User = mongoose.model('User', userSchema);
+
+module.exports = User;
+
+
+- Pada kode diatas, kita gunakan modul Mongoose yang sudah terpasang di komputer kita. 
+Kemudian kita buat sebuah instans yang berasal dari mongoose.Schema untuk memulai pembuatan 
+skema collection yang akan diciptakan. Kemudian kita definisikan skema yang diinginkan. Misal 
+field username memiliki tipe String, kemudian field tersebut harus diisi, dan fied tersebut harus unik. 
+Ada juga field admin yang bertipe Boolean dan hanya bisa diisi dengan nilai true atau false. 
+Terakhir ada field tambahan timestamps. Secara otomatis, Mongoose akan membuatkan dua buah field yaitu 
+createdAt dan updatedAt yang akan diisi saat pembuatan document atau pembaharuan document.
+
+- Karena kita belum membuat halaman untuk membuat user, 
+maka kita akan membuat sebuah script sederhana untuk melakukan preload atau 
+mengisi data awal untuk collection User. Karena User memiliki field password 
+dan tentu saja harus kita sembunyikan bentuk aslinya, jangan sampai admin melihat 
+password orang lain. Maka kita dapat menggunakan modul crypto yang dimiliki oleh Node.js. 
+Kita akan sembunyikan setiap password user dengan menggunakan sha256 dengan kunci codepolitan.
+
+- Silahkan buat terlebih dahulu folder bernama data di dalam folder proyek, 
+kemudian kita buat kode dibawah dengan nama init.js:
+
+var mongoose = require('mongoose');
+var crypto = require('crypto');
+
+var secret = 'codepolitan';
+var password = crypto.createHmac('sha256', secret)
+                   .update('rahasia123')
+                   .digest('hex');
+
+console.log("Password: " + password);
+
+mongoose.Promise = global.Promise;
+mongoose.connect('mongodb://localhost/organo');
+
+var User = require('../models/user');
+
+User.find({username:'superadmin'}, function (err, user){
+    if (user.length == 0)
+    {
+        var admin = new User({
+            username: 'superadmin',
+            email: 'admin@example.com',
+            password: password,
+            firstname: 'super',
+            lastname: 'admin',
+            admin: true,
+        });
+
+        admin.save(function(err) {
+          if (err) throw err;
+
+          console.log('Admin is created!');
+        });
+    }
+});
+
+User.find({username:'supermember'}, function (err, user){
+    if (user.length == 0)
+    {
+        var member = new User({
+            username: 'supermember',
+            email: 'member@example.com',
+            password: password,
+            firstname: 'super',
+            lastname: 'member',
+            admin: false,
+        });
+
+        member.save(function(err) {
+          if (err) throw err;
+
+          console.log('Member is created!');
+        });
+    }
+});
+
+
+- Pastikan Anda sudah menjalankan service MongoDB terlebih dahulu 
+sebelum mengeksekusi kode diatas. Bila sudah dijalankan, Anda dapat mengeksekusi perintah 
+berikut di terminal atau konsol:
+$ node data/init.js
+
+Password: 0cc67e99bb0cd75d83b9f9cd162c3ac207fb0a714dc291c53ea71f5dfc697332
+Admin is created!
+Member is created!
+
+## 
+Pada kode diatas, Anda dapat melihat bahwa kita akan terhubung dengan 
+sebuah database bernama organo di MongoDB. Kemudian kita buat terlebih dahulu sebuah 
+instans dengan nama User dari skema models.user. Sebelum membuat user kita periksa 
+terlebih dahulu dengan menggunakan method find(), apakah user dengan username yang 
+diinginkan sudah ada ata belum. Bila belum ada, maka kita buat document baru 
+dan menyimpannya dengan method save().
+
+
+3. Bila berhasil dibuat, Anda dapat melihatnya melalui konsol MongoDB seperti berikut:
+
+- $ mongo
+> use organo;
+> db.users.find();
+> db.users.find();
+
+
+hasil : 
+
+{ "updatedAt" : ISODate("2016-10-22T23:47:27.924Z"), "createdAt" : ISODate("2016-10-22T23:47:27.924Z"), "username" : "superadmin", "email" : "admin@example.com", "password" : "0cc67e99bb0cd75d83b9f9cd162c3ac207fb0a714dc291c53ea71f5dfc697332", "firstname" : "super", "lastname" : "admin", "admin" : true, "_id" : ObjectId("580bfa8f6fa496191508111b"), "__v" : 0 }
+{ "updatedAt" : ISODate("2016-10-22T23:47:27.970Z"), "createdAt" : ISODate("2016-10-22T23:47:27.970Z"), "username" : "supermember", "email" : "member@example.com", "password" : "0cc67e99bb0cd75d83b9f9cd162c3ac207fb0a714dc291c53ea71f5dfc697332", "firstname" : "super", "lastname" : "member", "admin" : false, "_id" : ObjectId("580bfa8f6fa496191508111c"), "__v" : 0 }
+
+4. Membuat Middleware untuk Autentikasi
+
+- Sebelum kita lanjut, kita coba renungkan sejenak tentang masalah autentikasi. 
+Bila dalam suatu action ingin diautentikasi, cara apa yang mungkin dilakukan? 
+salah satu caranya adalah membuat sebuah kondisi untuk memeriksa di setiap action yang dibuat. 
+Tentu hal ini akan agak boros karena di setiap action harus membuat kondisi yang sama. 
+Kalau saja ada pergantian kondisi untuk autentikasi tersebut, apa yang harus kita lakukan? 
+pasti harus diperbaiki disetiap action yang kita sematkan kondisi berikut.
+
+- Express.js memiliki sebuah filter yang dinamakan dengan middleware. Sebuah kode yang dapat disematkan 
+disetiap route tanpa harus menyertakan kodenya pada kode didalam route. Middleware dibuat di dalam 
+file terpisah, kemudian objeknya digunakan sebelum menyertakan callback untuk menangani aksi pada route. 
+Middleware akan dieksekusi sebelum proses memasuki kode route. Jadi bila kita ingin melakukan perubahan 
+kode pemeriksaan autentikasi. Cukup kode di file middleware saja yang kita ubah.
+
+- buat folder dengan nama middlewares di demo/middlewares 
+- buat sebuah file dengan nama auth.js di demo/middlewares/auth.js
+isikan :
+
+var Auth = {
+    check_login: function (req, res, next)
+    {
+        if (!req.session.logged_in) {
+            return res.redirect('/login');
+        }
+
+        next();
+    },
+    is_admin: function (req, res, next)
+    {
+        if (!req.session.admin) {
+
+            req.flash('info', 'Maaf, Anda tidak dapat mengakses halaman yang Anda tuju!');
+            return res.redirect('/');
+        }
+
+        next();
+    },
+};
+
+
+module.exports = Auth;
+
+
+
+# Disini kita membuat sebuah objek Auth yang memiliki dua method yaitu check_login dan is_admin. 
+Method check_login digunakan untuk memeriksa apakah user sudah login atau belum. 
+Sedangkan is_admin digunakan untuk memeriksa apakah user yang login adalah admin atau bukan. 
+Pada is_admin kita mengirimkan sebuah flash message untuk memberitahu user non-admin bahwa dia tidak dapat mengakses halaman tersebut. 
+Setiap hasil pemeriksaan akan di-redirect ke halaman lain.
+
+4. Membuat Login
+
+- Sebelum kita mulai, pastikan file app.js Anda seperti pada kode berikut:
+
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var flash = require('express-flash');
+var session = require('express-session');
+var mongoose = require('mongoose');
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(session({secret:"rahasia12345"}));
+app.use(flash());
+
+app.use('/', routes);
+app.use('/users', users);
+
+// setting MongoDB dengan Mongoose
+var user = require('./models/user');
+
+mongoose.Promise = global.Promise;
+mongoose.connect('mongodb://localhost/organo');
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+  res.status(err.status || 500);
+  res.render('error', {
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+
+######## BERIKUT NAMA NAMA DEPENDENCY YANG SUDAH DITAMBAHKAN DIATAS DARI KODE SEBELUMNYA ###### :
+
+// new dependency
+
+var favicon = require('serve-favicon');
+
+
+var bodyParser = require('body-parser');
+var flash = require('express-flash');
+var session = require('express-session');
+var mongoose = require('mongoose');
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+
+
+//lalu menggunakan 
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(session({secret:"rahasia12345"}));
+app.use(flash());
+
+
+// setting MongoDB dengan Mongoose
+var user = require('./models/user');
+
+mongoose.Promise = global.Promise;
+mongoose.connect('mongodb://localhost/organo');
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+  res.status(err.status || 500);
+  res.render('error', {
+    message: err.message,
+    error: {}
+  });
+});
+
+
+### PENJELASAN
+Sekarang kita akan menggunakan model dan middleware yang telah kita buat sebelumnya di route index.js. 
+Saat pertama kali membuat proyek Express.js, ada dua route yang dibuatkan oleh Express.js yaitu index.js 
+dan users.js. Kita akan menggunakan dua file tersebut, jadi jangan sampai dihapus. 
+Sekarang kita akan membuat terlebih dahulu proses login dengan mengandalkan model User 
+dan middleware auth yang telah kita buat sebelumnya.
+
+5. UBAH routes/index.js. 
+Kita akan membuat URL / yang ditengahi oleh check_login, 
+membuat URL /login dengan metode GET dan /login dengan metode POST 
+dimana akan terjadi proses pemeriksaan user saat hendak login.
+
+# sehingga :
+
+var express = require('express');
+var crypto = require('crypto');
+var User = require('../models/user');
+var Auth_mdw = require('../middlewares/auth');
+
+var router = express.Router();
+var secret = 'codepolitan';
+var session_store;
+
+router.get('/', Auth_mdw.check_login, function(req, res, next) {
+  session_store = req.session;
+  res.render('index', { title: 'Codepolitan Express.js Blog Series', session_store:session_store });
+});
+
+router.get('/login', function(req, res, next) {
+  res.render('login');
+});
+
+router.post('/login', function(req, res, next) {
+  session_store = req.session;
+  var password = crypto.createHmac('sha256', secret)
+                   .update(req.param('password'))
+                   .digest('hex');
+
+  if (req.param('username') == ""  || req.param('password') == "")
+  {
+      req.flash('info', 'Punten, tidak boleh ada field yang kosong!');
+      res.redirect('/login');
+  }
+  else 
+  {
+      User.find({ username: req.param('username'), password:password }, function(err, user) {
+      if (err) throw err;
+
+      if (user.length > 0)
+      {
+          session_store.username = user[0].username;
+          session_store.email = user[0].email;
+          session_store.admin = user[0].admin;
+          session_store.logged_in = true;
+
+          res.redirect('/');
+      }
+      else 
+      {
+          req.flash('info', 'Sepertinya akun Anda salah!');
+          res.redirect('/login');
+      }
+
+    });
+  } 
+});
+
+module.exports = router;
+
+
+### 
+Di bagian awal file kita gunakan modul express, modul crypto, model User, dan middleware auth. 
+Kemudian kita membuat sebuah objek Router dan membuat variabel berisi kunci untuk password yaitu 
+codepolitan. Dan membuat sebuah variabel global bernama session_store yang akan digunakan untuk 
+menampun session di setiap route.
+
+
+###
+Untuk URL /, kita tampilkan halaman index yang direpresentasikan dengan file index.jade. 
+Tapi untuk route ini kita tengahi dengan Auth_mdw.check_login untuk memastikan apakah user 
+sudah login atau tidak. Lalu untuk /login dengan metode GET kita tampilkan form login yang 
+akan kita buat. Sedangkan untuk /login metode POST kita hash dulu password yang masuk kemudian 
+memeriksa apakah username dan password tidak kosong. Bila lolos, maka akan kita cari username 
+dan password yang sesuai di dalam collection User. Bila ada, maka kita dapat simpan data user 
+tersebut di session. Data yang disimpan antara lain username, email, admin, dan logged_in. Kemudian 
+akan di-redirect ke halaman index. Bila gagal, akan di-redirect kembali ke halaman login dengan 
+membawa sebuah flash message.
+
+6. buat files di demo/views/login.jade
+isikan : 
+
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    title Organo | Log in
+    meta(content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no', name='viewport')
+    // Bootstrap 3.3.2
+    link(href='/adminlte/bootstrap/css/bootstrap.min.css', rel='stylesheet', type='text/css')
+    // Font Awesome Icons
+    link(href='/font-awesome/css/font-awesome.min.css', rel='stylesheet', type='text/css')
+    // Theme style
+    link(href='/adminlte/dist/css/AdminLTE.min.css', rel='stylesheet', type='text/css')
+    // iCheck
+    link(href='/adminlte/plugins/iCheck/square/blue.css', rel='stylesheet', type='text/css')
+  body.login-page
+    .login-box
+      .login-logo
+        a(href='javascript:void(0);')
+          b Organo
+      // /.login-logo
+      .login-box-body
+        p.login-box-msg Silahkan Login!
+        form(action='/login/', method='POST', role='form')
+          - if (messages.info)
+            .alert.alert-danger.alert-dismissable
+              button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+              | #{messages.info}
+          .form-group.has-feedback
+            input.form-control(type='text', placeholder='Username', name='username', value='')
+            span.glyphicon.glyphicon-user.form-control-feedback
+          .form-group.has-feedback
+            input.form-control(type='password', placeholder='Password', name='password', value='')
+            span.glyphicon.glyphicon-lock.form-control-feedback
+          .row
+            .col-xs-12
+              input.btn.btn-primary.btn-block.btn-flat(type='submit', value='Log In')
+            // /.col
+      // /.login-box-body
+    // /.login-box
+    // jQuery 2.1.3
+    script(src='/adminlte/plugins/jQuery/jQuery-2.1.3.min.js')
+    // Bootstrap 3.3.2 JS
+    script(src='/adminlte/bootstrap/js/bootstrap.min.js', type='text/javascript')
+    // iCheck
+    script(src='/adminlte/plugins/iCheck/icheck.min.js', type='text/javascript')
+    script.
+      $(function () {
+        $('input').iCheck({
+          checkboxClass: 'icheckbox_square-blue',
+          radioClass: 'iradio_square-blue',
+          increaseArea: '20%' // optional
+        });
+      });
+
+- npm start atau nodemon
+# jika error Error: Cannot find module 'serve-favicon'
+SOLUSI :
+
+- hapus folder node_modules ( rm -rf ./node_modules)
+- npm install
+- npm install serve-favicon --save
+- npm start
+- localhost:3000
+
+7. Membuat Logout
+
+Sekarang kita akan membuat URL /logout dimana kita akan menghancurkan session dengan 
+menggunakan method destroy(). Setelah itu akan di-redirect ke URL /login metode GET. 
+
+- Sekarang silahkan tambahkan route berikut di dalam routes/index.js:
+
+router.get('/logout', function(req, res){
+    req.session.destroy(function(err){
+    if(err){
+      console.log(err);
+    }
+    else
+    {
+      res.redirect('/login');
+    }
+  });
+});
+
+- Sekarang kita coba logout dan periksa dengan inspect element di developer toolbar yang ada di web browser:
+Anda akan melihat bahwa sebelum ke URL /login, maka URL /logout akan diproses terlebih dahulu.
+
+
+8. Membuat Halaman Rahasia
+
+Karena kita mempunyai dua role yaitu admin dan member, kita akan mengujinya dengan menggunakan 
+is_admin yang ada di middleware auth. 
+Sekarang kita akan membuat sebuah halaman rahasia dengan URL /secret. 
+
+
+- buat file secret.jade di dalam folder views/secret.jade. 
+isi di dalam views/secret.jade:
+
+extends layout/base
+block content  
+    section.content-header
+        h1
+            | Secret Page
+            small This is a secret page
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Hi, Admin
+                    // /.box-header
+                    .box-body
+                        p Welcome to secret page
+                    // /.box-body
+                // /.box
+    // /.content
+
+- Sekarang tambahkan route /secret di dalam file routes/index.js:
+
+router.get('/secret', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next) {
+  session_store = req.session;
+  res.render('secret', { session_store:session_store });
+});
+
+- Kemudian edit juga file views/index.jade menjadi seperti berikut:
+
+# dari :
+
+extends layout/base
+block content  
+    section.content-header
+        h1
+            | Hello World
+            small This is a hello world page
+        ol.breadcrumb
+            li
+                a(href='#')
+                    i.fa.fa-dashboard
+                    |  Level
+            li.active Here
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Hi, Coders
+                    // /.box-header
+                    .box-body
+                        p Welcome to #{title}
+                    // /.box-body
+                // /.box
+    // /.content
+
+# MENJADI :
+
+extends layout/base
+block content  
+    section.content-header
+        h1
+            | Hello World
+            small This is a hello world page
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                - if (messages.info)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.info}
+                .box
+                    .box-header
+                        h3.box-title Hi, Coders
+                    // /.box-header
+                    .box-body
+                        p Welcome to #{title}
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+## 
+Anda dapat melihat selain menggunakan check_login, kita juga gunakan is_admin 
+untuk memeriksa apakah yang mengakses URL tersebut adalah admin atau bukan. 
+
+
+## PENUTUP
+
+Yesss, Anda berhasil melalui salah satu bagian penting dalam pembuatan aplikasi web. 
+Dengan Express.js, Anda sudah dapat membuat autentikasi sederhana dan juga membuat 
+model User dan middleware auth. Selain itu, Anda juga sudah belajar bagaimana 
+menggunakan session dan flash message di Express.js dengan menggunakan modul 
+express-session dan express-flash.

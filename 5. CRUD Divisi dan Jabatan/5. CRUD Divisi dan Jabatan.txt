@@ -1,0 +1,1050 @@
+sehREFF :
+https://www.codepolitan.com/memulai-pembuatan-aplikasi-web-dengan-express-js-5-crud-divisi-dan-jabatan
+
+
+# Setelah membuat CRUD untuk pengguna atau user dari aplikasi kita. Sekarang saatnya kita membuat 
+CRUD untuk mencatat ada divisi dan jabatan apa sajakah yang ada di organisasi kita. 
+Sebelum mengikuti tutorial ini, Anda diharuskan untuk mengikuti tutorial sebelumnya yaitu:
+
+
+- PDKT Dengan MongoDB
+- Memulai Pembuatan Aplikasi Web dengan Express.js (2): Menggunakan Jade dan Memasang Template Web AdminLTE
+- Memulai Pembuatan Aplikasi Web dengan Express.js (3): Form dan Autentikasi
+- Memulai Pembuatan Aplikasi Web dengan Express.js (4): CRUD User
+
+BAGIAN 5
+==========
+1. Persiapan
+- Silahkan sesuaikan file app.js Anda seperti pada kode berikut:
+pada line ini hanya menambahkan uncomment :
+
+// var divisi = require('./routes/divisi');
+// var jabatan = require('./routes/jabatan');
+
+// USE 
+// app.use('/divisi', divisi);
+// app.use('/jabatan', jabatan);
+
+yang nantinya akan dipakai membuat crud divisi dan jabatan
+
+## sehingga :
+
+
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var flash = require('express-flash');
+var session = require('express-session');
+var expressValidator = require('express-validator');
+var mongoose = require('mongoose');
+var methodOverride = require('method-override');
+
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(session({secret:"rahasia12345"}));
+app.use(flash());
+app.use(expressValidator());
+app.use(methodOverride(function(req, res){
+    if (req.body && typeof req.body == 'object' && '_method' in req.body)
+    {
+        var method = req.body._method;
+        delete req.body._method;
+        return method;
+    }
+}));
+
+app.use('/', routes);
+app.use('/users', users);
+
+// app.use('/divisi', divisi);
+// app.use('/jabatan', jabatan);
+
+// setting MongoDB dengan Mongoose
+var user = require('./models/user');
+
+mongoose.Promise = global.Promise;
+mongoose.connect('mongodb://localhost/organo');
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+  res.status(err.status || 500);
+  res.render('error', {
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+
+2. Sesuaikan juga file views/layout/sidebar.jade Anda dengan kode terbaru berikut untuk url link
+
+dari : 
+
+ li
+    a(href='#') Divisi
+ li
+    a(href='#') Jabatan
+
+menjadi :
+
+ li
+    a(href='/divisi') Divisi
+ li
+    a(href='/jabatan') Jabatan
+
+
+# sehingga :
+
+aside.main-sidebar
+    section.sidebar
+        ul.sidebar-menu
+            if session_store.admin
+                li.header Admin Area
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-table
+                            span Data Master
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='/divisi') Divisi
+                            li
+                                a(href='/jabatan') Jabatan
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-list
+                            span Keanggotaan
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='#') Anggota
+                            li
+                                a(href='#') Pengurus & Panitia
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-link
+                            span Pengaturan
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='/users') Pengguna
+                            li
+                                a(href='#') Tampilan
+                            li
+                                a(href='#') Backup Database
+            else
+                li.header Member Area
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-table
+                            span Keanggotaan
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='#') Profil
+                            li
+                                a(href='#') Kontribusi
+
+2. Sekarang buat terlebih dahulu file dan folder berikut:
+- file divisi.js dan jabatan.js di folder models
+- file divisi.js dan jabatan.js di folder routes
+- folder divisi di folder views
+- folder jabatan di folder views
+- file index.jade, add.jade, edit.jade di folder views/divisi
+- file index.jade, add.jade, edit.jade di folder views/jabatan
+
+3. Membuat Model Jabatan
+Sekarang kita akan membuat model Jabatan terlebih dahulu di dalam file models/jabatan.js. 
+Kita hanya membutuhkan dua field utama yaitu nama dan keterangan. Silahkan buat kode berikut 
+dalam file tersebut:
+
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var jabatanSchema = new Schema({
+  nama: { type: String, required: true, unique: true },
+  keterangan: String,
+},
+{
+    timestamps: true
+});
+
+var Jabatan = mongoose.model('Jabatan', jabatanSchema);
+
+module.exports = Jabatan;
+
+4. kita gunakan/use route baru untuk "jabatan" di file app.js seperti berikut :
+
+var jabatan = require('./routes/jabatan');
+
+- lalu tambahkan di app.js untuk model jabatan
+
+var jabatan = require('./models/jabatan');
+
+5. Membuat Halaman Index Jabatan
+
+Untuk mengawali pembuatan CRUD jabatan, 
+
+- kita buat dahulu routes "/" di file routes/jabatan.js. 
+- Kita akan membuat sebuah halaman index yang menampilkan daftar jabatan yang ada di organisasi kita. 
+- Disini kita menggunakan middleware auth yang telah kita buat di tutorial sebelumnya, 
+dan model Jabatan. 
+
+- Silahkan isikan kode berikut di file routes/jabatan.js:
+
+var express = require('express');
+var Jabatan = require('../models/jabatan');
+var Auth_mdw = require('../middlewares/auth');
+
+var router = express.Router();
+var session_store;
+
+router.get('/', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next) {
+    session_store = req.session;
+
+    Jabatan.find({}, function(err, rows){
+        console.log(rows);
+        res.render('jabatan/index', { session_store:session_store, jabatan: rows });
+    });
+});
+
+module.exports = router;
+
+- Untuk view-nya, kita akan membuat sebuah tabel dengan tambahan tombol tambah 
+jabatan di pojok kanan atas. Di setiap baris data akan ada tombol edit dan hapus. 
+Silahkan buat kode berikut di dalam file views/jabatan/index.jade:
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Daftar Jabatan
+            small Kelola jabatan organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                - if (messages.msg_error)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title Jabatan
+                        .box-tools
+                            a(href="/jabatan/add").btn.btn-primary.btn-sm
+                                i.glyphicon.glyphicon-plus  
+                                | &nbsp; Tambah Jabatan
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                th No.
+                                th Nama
+                                th Keterangan
+                                th Action
+                            tbody
+                                for row, index in jabatan
+                                    tr
+                                        td #{index+1}
+                                        td #{row.nama}
+                                        td #{row.keterangan}
+                                        td
+                                            div(style="display:inline-block;margin-right:5px;")
+                                                a(href="/jabatan/edit/#{row._id}").btn.btn-success.btn-xs
+                                                    i.glyphicon.glyphicon-pencil
+                                            div(style="display:inline-block")
+                                                form(method="POST", action="/jabatan/delete/#{row._id}")
+                                                    input(type="hidden", name="_method", value="DELETE")
+                                                    button(type="submit").btn.btn-danger.btn-xs
+                                                        i.glyphicon.glyphicon-trash
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+6. jalankan aplikasi dengan nodemon atau npm start.
+localhost:3000/jabatan
+
+7. Membuat Halaman Tambah Jabatan
+Setelah membuat halaman index, kini saatnya kita membuat halaman tambah jabatan terlebih dahulu. 
+Disini kita akan membuat dua route "/add" yang berbeda metode, yang satu GET dan yang satu POST. 
+Untuk yang bermetode GET akan menampilkan form tambah jabatan, sedangkan untuk yang bermetode POST 
+akan memproses data yang dikirim lewat form tambah jabatan. 
+
+- Tambahkan terlebih dahulu dua route tersebut di dalam file routes/jabatan.js
+isi routes/jabatan.js :
+
+// CREATE
+
+router.get('/add', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    res.render('jabatan/add', { session_store:session_store });
+});
+
+router.post('/add', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    req.assert('nama', 'Nama diperlukan').notEmpty();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_nama = req.sanitize( 'nama' ).escape().trim();
+        v_keterangan = req.sanitize( 'keterangan' ).escape().trim();
+
+        Jabatan.find({ nama: req.param('nama') }, function (err, row){
+            if (row.length == 0)
+            {
+                var jabatan = new Jabatan({
+                    nama: v_nama,
+                    keterangan: v_keterangan,
+                });
+
+                jabatan.save(function(err) {
+                    if (err) 
+                    {
+                        console.log(err);
+
+                        req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                        res.redirect('/jabatan');
+                    }
+                    else
+                    {
+                        req.flash('msg_info', 'Jabatan berhasil dibuat...');
+                        res.redirect('/jabatan');
+                    }
+                });
+            }
+            else
+            {
+                req.flash('msg_error', 'Punten, jabatan sudah ada...');
+                res.render('jabatan/add', { 
+                    session_store:session_store,
+                    nama: req.param('nama'),
+                    keterangan: req.param('keterangan'),
+                });
+            }
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        req.flash('msg_error', errors_detail);
+        res.render('jabatan/add', {
+            session_store: session_store, 
+            nama: req.param('nama'),
+            keterangan: req.param('keterangan'),
+        });
+    }
+});
+
+#Pada route bermetode POST, prosesnya kita validasi terlebih dahulu, bila lolos maka kita akan 
+simpan data jabatan baru, bila gagal maka akan ditampilkan ulang halaman tambah jabatan beserta 
+form yang sebelumnya telah diisi. Pada saat penyimpanan, akan diperiksa terlebih dahulu 
+apakah sudah ada jabatan dengan nama yang sama, bila sudah ada tidak akan disimpan lagi.
+
+
+8. isikan code di views/jabatan/add.jade:
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Tambah Jabatan
+            small Tambah jabatan organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Jabatan Baru
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/jabatan/add", method="POST").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Nama
+                                .col-md-6
+                                    input(type="text", name="nama", id="nama", value="#{ (nama) ? nama : '' }").form-control
+                            .form-group
+                                label(for="keterangan").col-md-3.control-label Keterangan
+                                .col-md-6
+                                    textarea(name="keterangan", id="keterangan").form-control
+                                        | #{ (keterangan) ? keterangan : '' }
+                            .form-group
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/jabatan").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content
+
+9. nodemon atau npm start.
+- localhost:3000/jabatan/add
+
+10. Membuat Halaman Edit Jabatan
+Selesai membuat tambah jabatan, sekarang kita akan membuat edit jabatan. Disini kita akan membuat 
+dua route yaitu "/edit/(:id)" yang bermetode GET dan POST. Seperti biasa, yang bermetode GET akan 
+menampilkan form, dan yang bermetode POST akan memproses data kiriman dari form edit jabatan. 
+
+- tambahkan dua route berikut setelah route tambah jabatan yang dikerjakan sebelumnya di routes/jabatan.js:
+
+//EDIT
+
+router.get('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    Jabatan.findOne({_id:req.params.id}, function (err, row){
+        if (row)
+        {
+            console.log(row);
+
+            res.render('jabatan/edit', { session_store:session_store, jabatan:  row});
+        }
+        else
+        {
+            req.flash('msg_error', 'Punten, jabatan tidak ditemukan!');
+            res.redirect('/jabatan');
+        }
+    });
+});
+
+router.put('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    req.assert('nama', 'Nama diperlukan').notEmpty();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_nama = req.sanitize( 'nama' ).escape().trim();
+        v_keterangan = req.sanitize( 'keterangan' ).escape().trim();
+
+        Jabatan.findById(req.params.id, function (err, row){
+            row.nama = v_nama;
+            row.keterangan = v_keterangan;
+
+            row.save(function(err) {
+                if (err) 
+                {
+                    console.log(err);
+
+                    req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                    res.redirect('/jabatan');
+                }
+                else
+                {
+                    req.flash('msg_info', 'Edit jabatan berhasil...');
+                    res.redirect('/jabatan');
+                }
+            });
+
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        req.flash('msg_error', errors_detail);
+        res.render('jabatan/edit', {
+            _id: req.params.id,
+            session_store: session_store, 
+            nama: req.param('nama'),
+            keterangan: req.param('keterangan'),
+        });
+    }
+});
+
+
+11.MEMBUAT FORM EDIT JABATAN
+
+- Hampir serupa dengan tambah jabatan, disini kita pilih dahulu jabatan yang akan di-edit, 
+kemudian isinya kita timpa dengan data kiriman dari form edit jabatan. Bila jabatan yang akan 
+di-edit tidak ada, akan kita kembalikan ke halaman index. 
+
+- Untuk membuat form edit jabatan, silahkan buat kode berikut di dalam file views/jabatan/edit.jade :
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Edit Jabatan
+            small Edit jabatan organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Edit Jabatan
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/jabatan/edit/#{ (_id == undefined) ? jabatan._id : _id }", method="POST").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Nama
+                                .col-md-6
+                                    input(type="text", name="nama", id="nama", value="#{ (nama == undefined) ? jabatan.nama : nama }").form-control
+                            .form-group
+                                label(for="keterangan").col-md-3.control-label Keterangan
+                                .col-md-6
+                                    textarea(name="keterangan", id="keterangan").form-control
+                                        | #{ (keterangan == undefined) ? jabatan.keterangan : keterangan }
+                            .form-group
+                                input(type="hidden", name="_method", value="PUT")
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/jabatan").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+# stop/restart servernya terlebih dahulu untuk melihat perubahan
+jalankan aplikasi dengan nodemon atau npm start. lalu coba edit jabatan
+
+12. Membuat Hapus Jabatan
+Sekarang fitur yang terakhir untuk CRUD jabatan adalah membuat hapus jabatan. 
+
+- Kita akan membuat route "/delete/(:id)" dengan metode DELETE. 
+Disana kita akan mencari jabatan yang akan  dihapus berdasarkan ID-
+nya, kemudian kita panggil metode remove(). Bila berhasil dihapus maka 
+akan muncul pesan flash berhasil di halaman index.
+
+- buka routes/jabatan.js tambahkan :
+
+router.delete('/delete/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    Jabatan.findById(req.params.id, function(err, row){
+        row.remove(function(err, user){
+            if (err) 
+            {
+                console.log(err);
+                req.flash('msg_error', 'Punten, sepertinya jabatan yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            }
+            else
+            {
+                req.flash('msg_info', 'Hapus jabatan berhasil!');
+            }
+            res.redirect('/jabatan');
+        });
+    });
+});
+
+- restart server nodejs lalu start dan coba delete lagi
+
+
+13. Membuat Model Divisi
+
+Tidak berbeda jauh dengan model jabatan, sekarang kita akan membuat model untuk divisi. 
+
+- Silahkan buat kode berikut ke dalam file models/divisi.js:
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var divisiSchema = new Schema({
+  nama: { type: String, required: true, unique: true },
+  keterangan: String,
+},
+{
+    timestamps: true
+});
+
+var Divisi = mongoose.model('Divisi', divisiSchema);
+
+module.exports = Divisi;
+
+14. buka app.js tambahkan :
+
+var divisi = require('./routes/divisi');
+
+dan
+
+app.use('/divisi', divisi);
+
+jika sudah ada uncomment saja
+
+15. Membuat Halaman Index Divisi
+
+Untuk menampilkan daftar divisi yang ada di organisasi kita, dibutuhkan sebuah route "/" bermetode GET. 
+
+- tambahkan kode ini di routes/divisi.js :
+var express = require('express');
+var Divisi = require('../models/divisi');
+var Auth_mdw = require('../middlewares/auth');
+
+var router = express.Router();
+var session_store;
+
+router.get('/', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next) {
+    session_store = req.session;
+
+    Divisi.find({}, function(err, rows){
+        console.log(rows);
+        res.render('divisi/index', { session_store:session_store, divisi: rows });
+    });
+});
+
+
+module.exports = router;
+
+16. isikan views/dvisi/index.jade dengan kode ini :
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Daftar Divisi
+            small Kelola divisi organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                - if (messages.msg_error)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title Divisi
+                        .box-tools
+                            a(href="/divisi/add").btn.btn-primary.btn-sm
+                                i.glyphicon.glyphicon-plus  
+                                | &nbsp; Tambah Divisi
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                th No.
+                                th Nama
+                                th Keterangan
+                                th Action
+                            tbody
+                                for row, index in divisi
+                                    tr
+                                        td #{index+1}
+                                        td #{row.nama}
+                                        td #{row.keterangan}
+                                        td
+                                            div(style="display:inline-block;margin-right:5px;")
+                                                a(href="/divisi/edit/#{row._id}").btn.btn-success.btn-xs
+                                                    i.glyphicon.glyphicon-pencil
+                                            div(style="display:inline-block")
+                                                form(method="POST", action="/divisi/delete/#{row._id}")
+                                                    input(type="hidden", name="_method", value="DELETE")
+                                                    button(type="submit").btn.btn-danger.btn-xs
+                                                        i.glyphicon.glyphicon-trash
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+- restart server dan nodemon atau npm start. Mari kita lihat hasilnya
+
+17. Membuat Halaman Tambah Divisi
+
+Sekarang kita akan membuat route "/add" untuk tambah divisi dengan metode GET dan POST. 
+Silahkan tambahkan kode berikut ke dalam file routes/divisi.js:
+
+router.get('/add', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    res.render('divisi/add', { session_store:session_store });
+});
+
+router.post('/add', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    req.assert('nama', 'Nama diperlukan').notEmpty();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_nama = req.sanitize( 'nama' ).escape().trim();
+        v_keterangan = req.sanitize( 'keterangan' ).escape().trim();
+
+        Divisi.find({ nama: req.param('nama') }, function (err, row){
+            if (row.length == 0)
+            {
+                var divisi = new Divisi({
+                    nama: v_nama,
+                    keterangan: v_keterangan,
+                });
+
+                divisi.save(function(err) {
+                    if (err) 
+                    {
+                        console.log(err);
+
+                        req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                        res.redirect('/divisi');
+                    }
+                    else
+                    {
+                        req.flash('msg_info', 'Divisi berhasil dibuat...');
+                        res.redirect('/divisi');
+                    }
+                });
+            }
+            else
+            {
+                req.flash('msg_error', 'Punten, divisi sudah ada...');
+                res.render('divisi/add', { 
+                    session_store:session_store,
+                    nama: req.param('nama'),
+                    keterangan: req.param('keterangan'),
+                });
+            }
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        req.flash('msg_error', errors_detail);
+        res.render('divisi/add', {
+            session_store: session_store, 
+            nama: req.param('nama'),
+            keterangan: req.param('keterangan'),
+        });
+    }
+});
+
+
+18. isikan kode di views/divisi/add.jade:
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Tambah Divisi
+            small Tambah divisi organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Divisi Baru
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/divisi/add", method="POST").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Nama
+                                .col-md-6
+                                    input(type="text", name="nama", id="nama", value="#{ (nama) ? nama : '' }").form-control
+                            .form-group
+                                label(for="keterangan").col-md-3.control-label Keterangan
+                                .col-md-6
+                                    textarea(name="keterangan", id="keterangan").form-control
+                                        | #{ (keterangan) ? keterangan : '' }
+                            .form-group
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/divisi").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+- restart server dan nodemon atau npm start. Mari kita lihat hasilnya
+
+19. Membuat Halaman Edit Divisi
+
+Untuk melakukan edit divisi, kita membutuhkan route "/edit/(:id)" dengan metode GET dan POST. 
+Yang bermetode GET digunakan untuk menampilkan form edit divisi, sedangkan yang bermetode POST 
+untuk memproses data kiriman dari form edit divisi. 
+
+- Silahkan tambahkan dua route berikut ke dalam file routes/divisi.js:
+
+router.get('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    Divisi.findOne({_id:req.params.id}, function (err, divisi){
+        if (divisi)
+        {
+            console.log(divisi);
+
+            res.render('divisi/edit', { session_store:session_store, divisi: divisi });
+        }
+        else
+        {
+            req.flash('msg_error', 'Punten, divisi tidak ditemukan!');
+            res.redirect('/divisi');
+        }
+    });
+});
+
+router.put('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    req.assert('nama', 'Nama diperlukan').notEmpty();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_nama = req.sanitize( 'nama' ).escape().trim();
+        v_keterangan = req.sanitize( 'keterangan' ).escape().trim();
+
+        Divisi.findById(req.params.id, function (err, row){
+            row.nama = v_nama;
+            row.keterangan = v_keterangan;
+
+            row.save(function(err) {
+                if (err) 
+                {
+                    console.log(err);
+
+                    req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                    res.redirect('/divisi');
+                }
+                else
+                {
+                    req.flash('msg_info', 'Edit divisi berhasil...');
+                    res.redirect('/divisi');
+                }
+            });
+
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        req.flash('msg_error', errors_detail);
+        res.render('divisi/edit', {
+            _id: req.params.id,
+            session_store: session_store, 
+            nama: req.param('nama'),
+            keterangan: req.param('keterangan'),
+        });
+    }
+});
+
+20. isikan kode di views/divisi.edit.jade:
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Edit Divisi
+            small Edit divisi organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Edit Divisi
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/divisi/edit/#{ (_id == undefined) ? divisi._id : _id }", method="POST").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Nama
+                                .col-md-6
+                                    input(type="text", name="nama", id="nama", value="#{ (nama == undefined) ? divisi.nama : nama }").form-control
+                            .form-group
+                                label(for="keterangan").col-md-3.control-label Keterangan
+                                .col-md-6
+                                    textarea(name="keterangan", id="keterangan").form-control
+                                        | #{ (keterangan == undefined) ? divisi.keterangan : keterangan }
+                            .form-group
+                                input(type="hidden", name="_method", value="PUT")
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/divisi").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+- restart server dan nodemon atau npm start. Mari kita lihat hasilnya
+
+21. Membuat Hapus Divisi
+
+- Untuk proses hapus divisi, silahkan tambahkan route "/delete/(:id)" 
+dengan metode DELETE berikut ke dalam file routes/divisi.js:
+
+router.delete('/delete/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    Divisi.findById(req.params.id, function(err, row){
+        row.remove(function(err, user){
+            if (err) 
+            {
+                console.log(err);
+                req.flash('msg_error', 'Punten, sepertinya divisi yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            }
+            else
+            {
+                req.flash('msg_info', 'Hapus divisi berhasil!');
+            }
+            res.redirect('/divisi');
+        });
+    });
+});
+
+
+- restart server dan nodemon atau npm start. Mari kita lihat hasilnya
+
+### Penutup
+Diharapkan dengan mengikuti tutorial ini, Anda semakin terbiasa membuat CRUD sederhana dengan menggunakan 
+Express.js dan Jade. Dengan telah membuat CRUD sebanyak tiga kali, Anda akan siap dengan CRUD 
+berikutnya yang lebih kompleks. Bila Ada pertanyaan atau tulisan yang salah, jangan sungkan untuk 
+bertanya di kolom komentar agar diskusi lebih mudah diakses.

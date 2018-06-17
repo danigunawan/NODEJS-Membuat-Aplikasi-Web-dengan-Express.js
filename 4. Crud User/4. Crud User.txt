@@ -1,0 +1,651 @@
+REFF :
+https://www.codepolitan.com/memulai-pembuatan-aplikasi-web-dengan-express-js-4-crud-user
+
+Sebelum mengikuti tutorial ini, Anda diharuskan untuk mengikuti tutorial sebelumnya yaitu:
+
+- PDKT Dengan MongoDB
+- Memulai Pembuatan Aplikasi Web dengan Express.js (2): Menggunakan Jade dan Memasang Template Web AdminLTE
+- Memulai Pembuatan Aplikasi Web dengan Express.js (3): Form dan Autentikasi
+
+BAGIAN 4
+=========
+1. Persiapan
+
+Sebagai awalan, Anda harus memasang sebuah npm yang bernama method-override. 
+NPM tersebut digunakan untuk menjalankan metode DELETE dan PUT dari form HTML. 
+Karena saat ini beberapa web browser belum mendukung metode DELETE dan PUT seperti layaknya GET dan POST. 
+Kemudian satu lagi Anda harus memasang NPM express-validator yang akan digunakan sebagai alat untuk 
+memvalidasi kiriman yang dikirimkan oleh user melalui form. Anda dapat memasang kedua npm tersebut 
+di dalam proyek aplikasi dengan cara seperti berikut:
+
+- cd demo
+- npm install method-override
+- npm install express-validator
+
+2. Lalu silahkan sesuaikan file app.js 
+Anda seperti pada kode berikut karena kita harus mengkonfigurasi method-override:
+
+tambahkan paket ini :
+
+var expressValidator = require('express-validator');
+var methodOverride = require('method-override');
+
+lalu untuk menggunakan paket validator dan ovveride tambahkan code ini :
+
+app.use(expressValidator());
+app.use(methodOverride(function(req, res){
+    if (req.body && typeof req.body == 'object' && '_method' in req.body)
+    {
+        var method = req.body._method;
+        delete req.body._method;
+        return method;
+    }
+}));
+
+## Sehingga : 
+
+
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var flash = require('express-flash');
+var session = require('express-session');
+var expressValidator = require('express-validator');
+var mongoose = require('mongoose');
+var methodOverride = require('method-override');
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(session({secret:"rahasia12345"}));
+app.use(flash());
+app.use(expressValidator());
+app.use(methodOverride(function(req, res){
+    if (req.body && typeof req.body == 'object' && '_method' in req.body)
+    {
+        var method = req.body._method;
+        delete req.body._method;
+        return method;
+    }
+}));
+
+app.use('/', routes);
+app.use('/users', users);
+
+// setting MongoDB dengan Mongoose
+var user = require('./models/user');
+
+mongoose.Promise = global.Promise;
+mongoose.connect('mongodb://localhost/organo');
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+  res.status(err.status || 500);
+  res.render('error', {
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+
+3. Sebagai pengingat, kita akan menggunakan model User yang terdapat di file models/user.js:
+
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var userSchema = new Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  email: { type: String, required: true },
+  firstname: String,
+  lastname: String,
+  admin: Boolean,
+},
+{
+    timestamps: true
+});
+
+var User = mongoose.model('User', userSchema);
+
+module.exports = User;
+
+4. Membuat Halaman Index User
+Di halaman index user, Anda akan membuat sebuah halaman yang terdiri dari tabel user dan diatasnya terdapat 
+sebuah tombol "Tambah User". Selain itu di setiap barisnya terdapat dua tombol kecil untuk edit dan 
+hapus user. Sekarang mari kita buat terlebih dahulu route index di file routes/users.js. Route tersebut 
+akan ditengahi oleh is_admin dan check_login. Kemudian di dalamnya akan terdapat kode untuk mengambil 
+semua user dari collection User. Hasilnya akan di-render di dalam file views/users/index.jade yang akan 
+kita buat setelah ini.
+
+- masukan kode berikut ke dalam file routes/users.js:
+
+# ubah users.js dari :
+
+var express = require('express');
+var router = express.Router();
+
+/* GET users listing. */
+router.get('/', function(req, res, next) {
+  res.send('respond with a resource');
+});
+
+module.exports = router;
+
+
+# menjadi :
+
+var express = require('express');
+var crypto = require('crypto');
+var User = require('../models/user');
+var Auth_mdw = require('../middlewares/auth');
+
+var router = express.Router();
+var secret = 'codepolitan';
+var session_store;
+
+var default_password = crypto.createHmac('sha256', secret)
+                   .update('default')
+                   .digest('hex');
+
+router.get('/', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next) {
+    session_store = req.session;
+
+    User.find({}, function(err, user){
+        console.log(user);
+        res.render('users/index', { session_store:session_store, users: user });
+    }).select('username email firstname lastname admin createdAt updatedAt');
+});
+
+module.exports = router;
+
+5. buat terlebih dahulu folder dengan nama users di views/users. 
+- buat file dengan nama index.jade didalam views/users/index.jade 
+- isikan code di file views/users/index.jade:
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Daftar Pengguna
+            small Kelola pengguna Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                - if (messages.msg_error)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title Pengguna
+                        .box-tools
+                            a(href="/users/add").btn.btn-primary.btn-sm
+                                i.glyphicon.glyphicon-plus  
+                                | &nbsp; Tambah Pengguna Baru
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+
+                        table.table.table-striped
+                            thead
+                                th No.
+                                th Username
+                                th Email
+                                th Nama Depan
+                                th Nama Belakang
+                                th Admin
+                                th Action
+                            tbody
+                                for user, index in users
+                                    tr
+                                        td #{index+1}
+                                        td #{user.username}
+                                        td #{user.email}
+                                        td #{user.firstname}
+                                        td #{user.lastname}
+                                        td 
+                                            if (user.admin)
+                                                p Admin
+                                            else
+                                                p Member
+                                        td
+                                            div(style="display:inline-block;margin-right:5px;")
+                                                a(href="/users/edit/#{user._id}").btn.btn-success.btn-xs
+                                                    i.glyphicon.glyphicon-pencil
+                                            div(style="display:inline-block")
+                                                form(method="POST", action="/users/delete/#{user._id}")
+                                                    input(type="hidden", name="_method", value="DELETE")
+                                                    button(type="submit").btn.btn-danger.btn-xs
+                                                        i.glyphicon.glyphicon-trash
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+- Bila semuanya sudah sesuai, Anda dapat menjalankan aplikasi dengan npm start atau nodemon 
+Bila Anda mengikuti tutorial sebelumnya, Anda akan melihat dua user yang sudah dibuat yaitu superadmin dan supermember.
+
+
+6. Membuat Halaman Tambah User
+Sekarang kita tambahkan juga fitur tambah user dengan URL "/add" yang terbagi menjadi 
+dua route yang satu GET dan satunya lagi POST. Kedua route akan ditengahi 
+oleh is_admin dan check_login. 
+
+- tambahkan kode berikut ke dalam file routes/users.js:
+
+router.get('/add', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next) {
+    session_store = req.session;
+
+    res.render('users/add', { session_store:session_store });
+});
+
+router.post('/add', Auth_mdw.check_login, Auth_mdw.is_admin, function (req, res, next){
+    session_store = req.session;
+
+    req.assert('username', 'Nama diperlukan').isAlpha().withMessage('Username harus terdiri dari angka dan huruf').notEmpty();
+    req.assert('email', 'E-mail tidak valid').notEmpty().withMessage('E-mail diperlukan').isEmail();
+    req.assert('firstname', 'Nama depan harus terdiri dari angka dan huruf').isAlpha();
+    req.assert('lastname', 'Nama belakang harus terdiri dari angka dan huruf').isAlpha();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_username = req.sanitize( 'username' ).escape().trim();
+        v_email = req.sanitize( 'email' ).escape().trim();
+        v_firstname = req.sanitize( 'firstname' ).escape().trim();
+        v_lastname = req.sanitize( 'lastname' ).escape().trim();
+        v_admin = req.sanitize( 'admin' ).escape().trim();
+
+        User.find({username:req.param('username')}, function (err, user){
+            if (user.length == 0)
+            {
+                var admin = new User({
+                    username: v_username,
+                    email: v_email,
+                    password: default_password,
+                    firstname: v_firstname,
+                    lastname: v_lastname,
+                    admin: v_admin,
+                });
+
+                admin.save(function(err) {
+                    if (err) 
+                    {
+                        console.log(err);
+
+                        req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                        res.redirect('/users');
+                    }
+                    else
+                    {
+                        req.flash('msg_info', 'User berhasil dibuat...');
+                        res.redirect('/users');
+                    }
+                });
+            }
+            else
+            {
+                req.flash('msg_error', 'Punten, username sudah digunakan...');
+                res.render('users/add', { 
+                    session_store:session_store,
+                    username: req.param('username'),
+                    email: req.param('email'),
+                    firstname: req.param('firstname'),
+                    lastname: req.param('lastname'),
+                });
+            }
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        req.flash('msg_error', errors_detail);
+        res.render('users/add', {
+            session_store: session_store, 
+            username: req.param('username'),
+            email: req.param('email'),
+            firstname: req.param('firstname'),
+            lastname: req.param('lastname'),
+        });
+    }
+
+});
+
+## Pada route /add dengan metode GET, kita lakukan render form add.jade yang berada di folder views/users. 
+File tersebut akan kita buat nanti. Kemudian pada route /add dengan metode POST terdapat proses validasi 
+terlebih dahulu untuk beberapa data seperti username dan email. Validasi pun dilakukan bila lolos maka ke
+tahap selanjutnya, bila gagal maka akan dikembalikan ke halaman tambah user dengan isian form sebelumnya 
+dan pesan pengisian yang salah. Bila proses validasi berhasil maka data yang dikirimkan akan dibersihkan 
+dengan menggunakan escape() dan trim().
+
+## Selanjutnya kita cari apakah user sudah pernah dibuat sebelumnya atau tidak. Bila sudah pernah ada 
+maka dikembalikan ke halaman tambah user dengan memberikan peringatan bahwa user sudah ada. Bila belum 
+Ada, maka kita gunakan instans dari model User untuk membuat document baru, setelah diisi lalu disimpan 
+dengan menggunakan method save(). Bila tidak ada masalah dengan MongoDB, proses akan di-redirect ke URL 
+"/users" sambil membawa pesan bahwa user sudah berhasil dibuat.
+
+7. buat file views/users/add.jade dan isikan :
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Tambah Pengguna
+            small Tambah pengguna Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Pengguna Baru
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/users/add", method="POST").form-horizontal
+                            .form-group
+                                label(for="username").col-md-3.control-label Username
+                                .col-md-6
+                                    input(type="text", name="username", id="username", value="#{ (username) ? username : '' }").form-control
+                            .form-group
+                                label(for="email").col-md-3.control-label E-Mail
+                                .col-md-6
+                                    input(type="text", name="email", id="email", value="#{ (email) ? email : '' }").form-control
+                            .form-group
+                                label(for="firstname").col-md-3.control-label Nama Depan
+                                .col-md-6
+                                    input(type="text", name="firstname", id="firstname", value="#{ (firstname) ? firstname : '' }").form-control
+                            .form-group
+                                label(for="lastname").col-md-3.control-label Nama Belakang
+                                .col-md-6
+                                    input(type="text", name="lastname", id="lastname", value="#{ (lastname) ? lastname : '' }").form-control
+                            .form-group
+                                label(for="admin").col-md-3.control-label Hak Akses
+                                .col-md-6
+                                    select(type="text", name="admin", id="admin").form-control
+                                        option(value="true") Admin
+                                        option(value="false") Member
+                            .form-group
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/users").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content
+
+8. npm start atau nodemon lihat hasilnya
+9. buat user baru dhanexlab masuk dengan menggunakan password default
+
+# Ada beberapa hal yang perlu Anda ingat dalam cara mengankap suatu data yang dikirimkan oleh client. 
+Pertama bila data berasal dari URL maka digunakan req.params.nama_variabel, sedangkan bila data berasal 
+dari form maka diambil dengan menggunakan req.param('nama_variabel'). Hal ini akan terus digunakan 
+hingga episode terakhir tutorial berseri ini.
+
+10. Membuat Halaman Edit User
+- Silahkan tambahkan kode route "/edit" dengan metode GET dan PUT berikut ke file routes/users.js :
+
+router.get('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next) {
+    session_store = req.session;
+
+    User.findOne({_id:req.params.id}, function (err, user){
+        if (user)
+        {
+            console.log(user);
+
+            res.render('users/edit', { session_store:session_store, user: user });
+        }
+        else
+        {
+            req.flash('msg_error', 'Punten, user tidak ditemukan!');
+            res.redirect('/users');
+        }
+    });
+});
+
+router.put('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function (req, res, next){
+    session_store = req.session;
+
+    req.assert('username', 'Nama diperlukan').isAlpha().withMessage('Username harus terdiri dari angka dan huruf').notEmpty();
+    req.assert('email', 'E-mail tidak valid').notEmpty().withMessage('E-mail diperlukan').isEmail();
+    req.assert('firstname', 'Nama depan harus terdiri dari angka dan huruf').isAlpha();
+    req.assert('lastname', 'Nama belakang harus terdiri dari angka dan huruf').isAlpha();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_username = req.sanitize( 'username' ).escape().trim();
+        v_email = req.sanitize( 'email' ).escape().trim();
+        v_firstname = req.sanitize( 'firstname' ).escape().trim();
+        v_lastname = req.sanitize( 'lastname' ).escape().trim();
+        v_admin = req.sanitize( 'admin' ).escape().trim();
+
+
+        User.findById(req.params.id, function(err, user){
+            user.username = req.param('username');
+            user.email = req.param('email');
+            user.firstname = req.param('firstname');
+            user.lastname = req.param('lastname');
+            user.admin = req.param('admin');
+
+            user.save(function(err, user){
+                if (err) 
+                {
+                    req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                }
+                else
+                {
+                    req.flash('msg_info', 'Edit user berhasil!');
+                }
+
+                res.redirect('/users/edit/'+req.params.id);
+
+            });
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        req.flash('msg_error', errors_detail);
+        res.render('users/edit', {
+            _id: req.params.id, 
+            session_store: session_store, 
+            username: req.param('username'),
+            email: req.param('email'),
+            firstname: req.param('firstname'),
+            lastname: req.param('lastname'),
+        });
+    }
+
+
+});
+
+# Pada route "/edit" metode GET kita pilih dulu user yang akan di-edit, lalu datanya kita kirimkan ke 
+file edit.jade yang ada di folder views/users. Sedangkan untuk route "/edit" metode PUT kita validasi 
+terlebih dahulu kemudian dibersihkan. Selanjutnya kita pilih user yang akan di-edit, dan kita 
+isi dengan nilai baru kemudian disimpan. Terakhir kita akan di-redirect ke halaman edit lagi dengan 
+diberikan pesan bahwa edit telah berhasil.
+
+10. buat file edit.jade di folder views/users/edit.jade, 
+dan buat kode berikut di dalam file tersebut:
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Edit Pengguna
+            small Edit pengguna Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Mengedit data
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/users/edit/#{ (_id == undefined) ? user._id : _id }", method="POST").form-horizontal
+                            .form-group
+                                label(for="username").col-md-3.control-label Username
+                                .col-md-6
+                                    input(type="text", name="username", id="username", value="#{ (username == undefined) ? user.username : username }").form-control
+                            .form-group
+                                label(for="email").col-md-3.control-label E-Mail
+                                .col-md-6
+                                    input(type="text", name="email", id="email", value="#{ (email == undefined) ? user.email : email }").form-control
+                            .form-group
+                                label(for="firstname").col-md-3.control-label Nama Depan
+                                .col-md-6
+                                    input(type="text", name="firstname", id="firstname", value="#{ (firstname == undefined) ? user.firstname : firstname }").form-control
+                            .form-group
+                                label(for="lastname").col-md-3.control-label Nama Belakang
+                                .col-md-6
+                                    input(type="text", name="lastname", id="lastname", value="#{ (lastname == undefined) ? user.lastname : lastname }").form-control
+                            .form-group
+                                label(for="admin").col-md-3.control-label Hak Akses
+                                .col-md-6
+                                    select(type="text", name="admin", id="admin").form-control
+                                        option(value="true") Admin
+                                        option(value="false") Member
+                            .form-group
+                                input(type="hidden", name="_method", value="PUT")
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/users").btn.btn-danger Kembali
+
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+11. Membuat Hapus User
+
+- Dan yang terakhir untuk tutorial ini, Anda akan membuat fitur hapus user dengan membuat sebuah route 
+"/delete/(:id)" yang bermetode DELETE. Silahkan tambahkan kode hapus user ke file routes/users.js:
+
+
+router.delete('/delete/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function (req, res, next){
+    User.findById(req.params.id, function(err, user){
+        user.remove(function(err, user){
+            if (err) 
+            {
+                req.flash('msg_error', 'Punten, sepertinya user yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            }
+            else
+            {
+                req.flash('msg_info', 'Hapus user berhasil!');
+            }
+            res.redirect('/users');
+        });
+    });
+});
+
+
+## 
+Disini route untuk menghapus user hanya melakukan pencarian terlebih dahulu 
+terhadap collection User bila ada maka akan dihapus dengan menggunakan method remove() bila tidak 
+ada maka akan dialihkan ke URL "/users" dengan membawa pesan error bila berhasil maka akan 
+muncul pesan "Hapus user berhasil!"
+
+
+## PENUTUP 
+
+Dengan menyelesaikan tutorial ini, Anda dapat menguasai validasi dan menggunakan metode PUT dan DELETE, 
+di Express.js. Tidak hanya itu Anda pun dapat mengetahui pembuatan CRUD dasar, sebelum membuat CRUD 
+lainnya di tutorial ini. Tujuan dari tutorial ini adalah membuat aplikasi web 
+yang cukup kompleks dimana Anda dapat membuat aplikasi yang dapat mengelola sebuah keanggotaan 
+dan kepengurusan di organisasi.

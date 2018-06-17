@@ -1,0 +1,60 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Edit Pengguna
+            small Edit pengguna Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Mengedit data
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/users/edit/#{ (_id == undefined) ? user._id : _id }", method="POST").form-horizontal
+                            .form-group
+                                label(for="username").col-md-3.control-label Username
+                                .col-md-6
+                                    input(type="text", name="username", id="username", value="#{ (username == undefined) ? user.username : username }").form-control
+                            .form-group
+                                label(for="email").col-md-3.control-label E-Mail
+                                .col-md-6
+                                    input(type="text", name="email", id="email", value="#{ (email == undefined) ? user.email : email }").form-control
+                            .form-group
+                                label(for="firstname").col-md-3.control-label Nama Depan
+                                .col-md-6
+                                    input(type="text", name="firstname", id="firstname", value="#{ (firstname == undefined) ? user.firstname : firstname }").form-control
+                            .form-group
+                                label(for="lastname").col-md-3.control-label Nama Belakang
+                                .col-md-6
+                                    input(type="text", name="lastname", id="lastname", value="#{ (lastname == undefined) ? user.lastname : lastname }").form-control
+                            .form-group
+                                label(for="admin").col-md-3.control-label Hak Akses
+                                .col-md-6
+                                    select(type="text", name="admin", id="admin").form-control
+                                        option(value="true") Admin
+                                        option(value="false") Member
+                            .form-group
+                                input(type="hidden", name="_method", value="PUT")
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/users").btn.btn-danger Kembali
+
+                    // /.box-body
+                // /.box
+    // /.content

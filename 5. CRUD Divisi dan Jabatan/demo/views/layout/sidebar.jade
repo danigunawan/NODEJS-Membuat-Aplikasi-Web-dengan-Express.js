@@ -1,0 +1,53 @@
+aside.main-sidebar
+    section.sidebar
+        ul.sidebar-menu
+            if session_store.admin
+                li.header Admin Area
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-table
+                            span Data Master
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='/divisi') Divisi
+                            li
+                                a(href='/jabatan') Jabatan
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-list
+                            span Keanggotaan
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='#') Anggota
+                            li
+                                a(href='#') Pengurus & Panitia
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-link
+                            span Pengaturan
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='/users') Pengguna
+                            li
+                                a(href='#') Tampilan
+                            li
+                                a(href='#') Backup Database
+            else
+                li.header Member Area
+                    li.treeview
+                        a(href='#')
+                            i.fa.fa-table
+                            span Keanggotaan
+                            span.pull-right-container
+                                i.fa.fa-angle-left.pull-right
+                        ul.treeview-menu
+                            li
+                                a(href='#') Profil
+                            li
+                                a(href='#') Kontribusi
