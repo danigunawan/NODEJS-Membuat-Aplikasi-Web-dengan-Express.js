@@ -1,0 +1,105 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Detail Anggota
+            small Anda dapat melihat detail anggota disini
+    // Main content
+    section.content
+        .row
+            .col-xs-8
+                - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title #{anggota.nama}
+                        .box-tools
+                            div(style="display:inline-block; margin-right:5px;")
+                                a(href="/anggota/edit/#{anggota.id}").btn.btn-success.btn-sm
+                                    i.glyphicon.glyphicon-pencil  
+                                    | &nbsp; Edit
+                            div(style="display:inline-block")
+                                form(method="POST", action="/anggota/delete/#{anggota._id}")
+                                    input(type="hidden", name="_method", value="DELETE")
+                                    button(type="submit").btn.btn-danger.btn-sm
+                                        i.glyphicon.glyphicon-trash Hapus
+                    // /.box-header
+                    .box-body
+
+                        ul
+                            li tempat / tanggal lahir: #{anggota.tempat_lahir} / #{anggota.tanggal_lahir}
+                            li gender: #{anggota.gender}
+                            li e-mail: #{anggota.email}
+                            li telepon: #{anggota.telepon}
+                        p #{anggota.keterangan}
+                    // /.box-body
+                // /.box
+            .col-xs-4
+                .box
+                    .box-header
+                        h3.box-title Foto
+                        .box-tools
+                            a(href="/anggota/change_profile_picture/#{anggota.id}").btn.btn-success.btn-sm
+                                i.glyphicon.glyphicon-picture  
+                                | &nbsp; Change Photo
+                            | &nbsp;
+                    // /.box-header
+                    .box-body
+                        div(style="text-align:center;")
+                            img(src="/uploads/#{anggota.propic_path}", style="height:125px;")
+                    // /.box-body
+                // /.box
+        .row
+            .col-xs-6
+                .box
+                    .box-header
+                            h3.box-title Kontak
+                            .box-tools
+                                a(href="/anggota/kontak/#{anggota.id}").btn.btn-success.btn-sm
+                                    i.glyphicon.glyphicon-pencil  
+                                    | &nbsp; Edit
+                                | &nbsp;
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                tr
+                                    td No.
+                                    td Kontak
+                                    td Tipe
+                            tbody
+                                for row, index in anggota.kontak
+                                    tr
+                                        td #{index+1}
+                                        td #{row.kontak}
+                                        td #{row.types}
+            .col-xs-6
+                .box
+                    .box-header
+                        h3.box-title Alamat
+                        .box-tools
+                            a(href="/anggota/alamat/#{anggota.id}").btn.btn-success.btn-sm
+                                i.glyphicon.glyphicon-pencil  
+                                | &nbsp; Edit
+                            | &nbsp;
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                tr
+                                    td No.
+                                    td Alamat
+                                    td Tipe
+                            tbody
+                                for row, index in anggota.alamat
+                                    tr
+                                        td #{index+1}
+                                        td #{row.alamat}
+                                        td #{row.types}
+                // /.box
+    // /.content

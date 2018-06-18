@@ -1,0 +1,80 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Edit Anggota
+            small Edit anggota organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Edit Anggota
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/anggota/edit/#{ (anggota_id) ? anggota_id : anggota.id }", method="POST").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Nama
+                                .col-md-6
+                                    input(type="text", name="nama", id="nama", value="#{ (anggota.nama) ? anggota.nama : nama }").form-control
+                            .form-group
+                                label(for="gender").col-md-3.control-label Jenis Kelamin
+                                .col-md-6
+                                    if (anggota.gender == "pria")
+                                        div(style="display:inline-block; margin-left:20px;").radio
+                                            input(type="radio", name="gender", id="gender", checked="true", value="pria") 
+                                            label(style="margin-left:-10px;") Pria
+                                        div(style="display:inline-block; margin-left:30px;").radio
+                                            input(type="radio", name="gender", id="gender", value="wanita") 
+                                            label(style="margin-left:-10px;") Wanita
+                                    else
+                                        div(style="display:inline-block; margin-left:20px;").radio
+                                            input(type="radio", name="gender", id="gender", value="pria") 
+                                            label(style="margin-left:-10px;") Pria
+                                        div(style="display:inline-block; margin-left:30px;").radio
+                                            input(type="radio", name="gender", id="gender", checked="true", value="wanita") 
+                                            label(style="margin-left:-10px;") Wanita
+                            .form-group
+                                label(for="tempat_lahir").col-md-3.control-label Tempat Lahir
+                                .col-md-6
+                                    input(type="text", name="tempat_lahir", id="tempat_lahir", value="#{ (anggota.tempat_lahir) ? anggota.tempat_lahir : tempat_lahir }").form-control
+                            .form-group
+                                label(for="tanggal_lahir").col-md-3.control-label Tanggal Lahir
+                                .col-md-6
+                                    input(type="text", name="tanggal_lahir", id="tanggal_lahir", value="#{ (tanggal_lahir) ? tanggal_lahir : '0000-00-00' }").form-control
+                            .form-group
+                                label(for="email").col-md-3.control-label E-Mail
+                                .col-md-6
+                                    input(type="text", name="email", id="email", value="#{ (anggota.email) ? anggota.email : email }").form-control
+                            .form-group
+                                label(for="telepon").col-md-3.control-label Telepon
+                                .col-md-6
+                                    input(type="text", name="telepon", id="telepon", value="#{ (anggota.telepon) ? anggota.telepon : telepon }").form-control
+                            .form-group
+                                label(for="keterangan").col-md-3.control-label Keterangan
+                                .col-md-6
+                                    textarea(name="keterangan", id="keterangan").form-control
+                                        | #{ (anggota.keterangan) ? anggota.keterangan : keterangan }
+                            .form-group
+                                input(type="hidden", name="_method", value="PUT")
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/anggota/#{ (anggota.id) ? anggota.id : anggota_id }").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content

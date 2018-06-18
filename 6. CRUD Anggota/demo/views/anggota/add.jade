@@ -1,0 +1,71 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Tambah Anggota
+            small Tambah anggota organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Anggota Baru
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/anggota/add", method="POST", role="form").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Nama
+                                .col-md-6
+                                    input(type="text", name="nama", id="nama", value="#{ (nama) ? nama : '' }").form-control
+                            .form-group
+                                label(for="gender").col-md-3.control-label Jenis Kelamin
+                                .col-md-6
+                                    div(style="display:inline-block; margin-left:20px;").radio
+                                        input(type="radio", name="gender", id="gender", checked="true", value="pria") 
+                                        label(style="margin-left:-10px;") Pria
+                                    div(style="display:inline-block; margin-left:30px;").radio
+                                        input(type="radio", name="gender", id="gender" value="wanita") 
+                                        label(style="margin-left:-10px;") Wanita
+                            .form-group
+                                label(for="tempat_lahir").col-md-3.control-label Tempat Lahir
+                                .col-md-6
+                                    input(type="text", name="tempat_lahir", id="tempat_lahir", value="#{ (tempat_lahir) ? tempat_lahir : '' }").form-control
+                            .form-group
+                                label(for="tanggal_lahir").col-md-3.control-label Tanggal Lahir
+                                .col-md-6
+                                    input(type="text", name="tanggal_lahir", id="tanggal_lahir", value="#{ (tanggal_lahir) ? tanggal_lahir : '' }").form-control
+                            .form-group
+                                label(for="email").col-md-3.control-label E-Mail
+                                .col-md-6
+                                    input(type="text", name="email", id="email", value="#{ (email) ? email : '' }").form-control
+                            .form-group
+                                label(for="telepon").col-md-3.control-label Telepon
+                                .col-md-6
+                                    input(type="text", name="telepon", id="telepon", value="#{ (telepon) ? telepon : '' }").form-control
+                            .form-group
+                                label(for="keterangan").col-md-3.control-label Keterangan
+                                .col-md-6
+                                    textarea(name="keterangan", id="keterangan").form-control
+                                        | #{ (keterangan) ? keterangan : '' }
+                            .form-group
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/anggota").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content

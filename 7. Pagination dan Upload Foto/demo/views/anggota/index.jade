@@ -1,0 +1,54 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Daftar Anggota
+            small Kelola anggota organisasi Anda disini
+    // Main content
+    section.content
+        .row
+            .col-xs-12
+                - if (messages.msg_error)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title Anggota
+                        .box-tools
+                            a(href="/anggota/add").btn.btn-primary.btn-sm
+                                i.glyphicon.glyphicon-plus  
+                                | &nbsp; Tambah Anggota
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                th No.
+                                th Nama
+                                th Info
+                                th Action
+                            tbody
+                                for row, index in anggota
+                                    tr
+                                        td #{index + offset + 1}
+                                        td #{row.nama}
+                                        td #{row.keterangan}
+                                        td(style="width:100px;")
+                                            div(style="display:inline-block;margin-right:5px;")
+                                                a(href="/anggota/#{row._id}").btn.btn-primary.btn-xs
+                                                    i.glyphicon.glyphicon-eye-open
+                                            div(style="display:inline-block")
+                                                form(method="POST", action="/anggota/delete/#{row._id}")
+                                                    input(type="hidden", name="_method", value="DELETE")
+                                                    button(type="submit").btn.btn-danger.btn-xs
+                                                        i.glyphicon.glyphicon-trash
+
+                    // /.box-body
+                    .box-footer.clearfix
+                        !{paginator}
+                // /.box
+    // /.content

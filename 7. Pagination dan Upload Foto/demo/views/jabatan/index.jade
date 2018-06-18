@@ -1,0 +1,53 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Daftar Jabatan
+            small Kelola jabatan organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                - if (messages.msg_error)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title Jabatan
+                        .box-tools
+                            a(href="/jabatan/add").btn.btn-primary.btn-sm
+                                i.glyphicon.glyphicon-plus  
+                                | &nbsp; Tambah Jabatan
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                th No.
+                                th Nama
+                                th Keterangan
+                                th Action
+                            tbody
+                                for row, index in jabatan
+                                    tr
+                                        td #{index+1}
+                                        td #{row.nama}
+                                        td #{row.keterangan}
+                                        td
+                                            div(style="display:inline-block;margin-right:5px;")
+                                                a(href="/jabatan/edit/#{row._id}").btn.btn-success.btn-xs
+                                                    i.glyphicon.glyphicon-pencil
+                                            div(style="display:inline-block")
+                                                form(method="POST", action="/jabatan/delete/#{row._id}")
+                                                    input(type="hidden", name="_method", value="DELETE")
+                                                    button(type="submit").btn.btn-danger.btn-xs
+                                                        i.glyphicon.glyphicon-trash
+                    // /.box-body
+                // /.box
+    // /.content

@@ -1,0 +1,46 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Tambah Jabatan
+            small Tambah jabatan organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Jabatan Baru
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/jabatan/add", method="POST").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Nama
+                                .col-md-6
+                                    input(type="text", name="nama", id="nama", value="#{ (nama) ? nama : '' }").form-control
+                            .form-group
+                                label(for="keterangan").col-md-3.control-label Keterangan
+                                .col-md-6
+                                    textarea(name="keterangan", id="keterangan").form-control
+                                        | #{ (keterangan) ? keterangan : '' }
+                            .form-group
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/jabatan").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content

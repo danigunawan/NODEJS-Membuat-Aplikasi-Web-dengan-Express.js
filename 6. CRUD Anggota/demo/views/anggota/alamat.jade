@@ -1,0 +1,59 @@
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Daftar Alamat
+            small Kelola alamat anggota Anda disini
+    // Main content
+    section.content
+        .row
+            .col-xs-12
+                - if (messages.msg_error)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title Alamat #{anggota.nama}
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        form(class="form-inline", role="form", action="/anggota/alamat/#{anggota.id}", method="POST",)
+                            div(style="margin-left:20px;margin-right:20px;").form-group
+                                label(for="alamat").control-label Alamat
+                                |&nbsp;
+                                input(type="text", name="alamat", id="alamat", value="", style="width:350px;").form-control
+                            div(style="margin-left:20px;margin-right:20px;").form-group
+                                label(for="types").control-label Tipe
+                                |&nbsp;
+                                select(name="types", id="types").form-control
+                                    option(value="rumah") Rumah
+                                    option(value="apartemen") Apartemen
+                                    option(value="kantor") Kantor
+                            input(type="submit" value="Tambah").btn.btn-primary
+                        br
+                        br
+                        table.table.table-striped
+                            thead
+                                th No.
+                                th Alamat
+                                th Tipe
+                                th Action
+                            tbody
+                                for row, index in anggota.alamat
+                                    tr
+                                        td #{index+1}
+                                        td #{row.alamat}
+                                        td #{row.types}
+                                        td
+                                            div(style="display:inline-block")
+                                                form(method="POST", action="/anggota/alamat/#{anggota.id}/delete/#{row._id}")
+                                                    input(type="hidden", name="_method", value="DELETE")
+                                                    button(type="submit").btn.btn-danger.btn-xs
+                                                        i.glyphicon.glyphicon-trash
+                    // /.box-body
+                // /.box
+    // /.content

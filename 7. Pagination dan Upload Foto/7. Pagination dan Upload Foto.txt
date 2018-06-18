@@ -1,0 +1,810 @@
+REFF :
+https://www.codepolitan.com/memulai-pembuatan-aplikasi-web-dengan-express-js-7-pagination-dan-upload-foto
+
+Setelah mengikuti episode sebelumnya. Sekarang saatnya kita membuat CRUD untuk mencatat anggota yang 
+bergabung dengan organisasi ktia. Sebelum mengikuti tutorial ini, Anda diharuskan untuk mengikuti 
+tutorial sebelumnya yaitu:
+- Memulai Pembuatan Aplikasi Web dengan Express.js (2): Menggunakan Jade dan Memasang Template Web AdminLTE
+- Memulai Pembuatan Aplikasi Web dengan Express.js (3): Form dan Autentikasi
+- Memulai Pembuatan Aplikasi Web dengan Express.js (4): CRUD User
+- Memulai Pembuatan Aplikasi Web dengan Express.js (5): CRUD Anggota
+
+
+BAGIAN 7
+==========
+1. Persiapan
+
+- folder dengan nama uploads di dalam folder public. 
+Folder tersebut akan digunakan untuk menyimpan foto yang di-upload oleh user untuk mengganti foto anggota. 
+- install paket modul Node.js berikut:
+
+$ npm install formidable
+$ npm install pagination
+
+
+2. Dan ada perubahan sedikit untuk model anggota.js 
+dengan menambahkan field propic_path seperti pada kode berikut:
+
+propic_path: String,
+
+sehingga : 
+
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var anggotaSchema = new Schema({
+  nama: { type: String, required: true, unique: true },
+  tempat_lahir: String,
+  tanggal_lahir: Date,
+  email: String,
+  telepon: String,
+  gender: String,
+  keterangan: String,
+  propic_path: String,
+
+  alamat: [{alamat: String, types: String}], // multirecord 
+  kontak: [{kontak: String, types: String}], // multirecord
+
+},
+{
+    timestamps: true
+});
+
+var Anggota = mongoose.model('Anggota', anggotaSchema);
+
+module.exports = Anggota; 
+
+
+3. Pagination di Halaman Index Anggota
+
+Ubah bagian import modul pada file routes/anggota.js 
+
+dengan menambahkan :
+
+var formidable = require('formidable');
+var fs = require('fs');
+var pagination = require('pagination');
+
+#Pada kode diatas, kita menggunakan modul formidable, fs, 
+dan pagination. Sekarang mari kita rombak route 
+"/" untuk menghasilkan dan menampilkan pagination, 
+
+# sehinga menjadi seperti berikut:
+
+
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var anggotaSchema = new Schema({
+  nama: { type: String, required: true, unique: true },
+  tempat_lahir: String,
+  tanggal_lahir: Date,
+  email: String,
+  telepon: String,
+  gender: String,
+  keterangan: String,
+  propic_path: String,
+
+  alamat: [{alamat: String, types: String}], // multirecord 
+  kontak: [{kontak: String, types: String}], // multirecord
+
+},
+{
+    timestamps: true
+});
+
+var Anggota = mongoose.model('Anggota', anggotaSchema);
+
+module.exports = Anggota;
+
+- Lalu Pada kode diatas, kita menggunakan modul formidable, fs, dan pagination. 
+Sekarang mari kita rombak route "/" untuk menghasilkan dan menampilkan pagination
+
+buka routes/anggota.js :
+
+router.get('/', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next) {
+    session_store = req.session;
+
+    Anggota.find({}, function(err, rows){
+        console.log(rows);
+
+        res.render('anggota/index', { session_store:session_store, anggota: rows });
+    });
+});
+
+// CREATE
+
+router.get('/add', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    res.render('anggota/add', { session_store:session_store });
+});
+
+router.post('/add', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    req.assert('nama', 'Nama diperlukan').notEmpty();
+    req.assert('tempat_lahir', 'Tempat lahir diperlukan').notEmpty();
+    req.assert('tanggal_lahir', 'Tanggal lahir diperlukan').notEmpty();
+    req.assert('email', 'E-Mail diperlukan').isEmail().withMessage('E-mail tidak valid').notEmpty();
+    req.assert('telepon', 'Telepon diperlukan').notEmpty();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_nama = req.sanitize( 'nama' ).escape().trim();
+        v_gender = req.sanitize('gender').escape().trim();
+        v_keterangan = req.sanitize( 'keterangan' ).escape().trim();
+        v_tempat_lahir = req.sanitize('tempat_lahir').escape().trim();
+        v_tanggal_lahir = req.sanitize('tanggal_lahir').escape().trim();
+        v_email = req.sanitize('email').escape().trim();
+        v_telepon = req.sanitize('telepon').escape().trim();
+
+        Anggota.find({ nama: req.param('nama') }, function (err, row){
+            if (row.length == 0)
+            {
+                var anggota = new Anggota({
+                    nama: v_nama,
+                    keterangan: v_keterangan,
+                    gender: v_gender,
+                    tempat_lahir: v_tempat_lahir,
+                    tanggal_lahir: v_tanggal_lahir,
+                    email: v_email,
+                    telepon: v_telepon,
+                    alamat: [],
+                    kontak: [],
+                });
+
+                anggota.save(function(err) {
+                    if (err) 
+                    {
+                        console.log(err);
+
+                        req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                        res.redirect('/anggota');
+                    }
+                    else
+                    {
+                        req.flash('msg_info', 'Anggota berhasil dibuat...');
+                        res.redirect('/anggota');
+                    }
+                });
+            }
+            else
+            {
+                req.flash('msg_error', 'Punten, anggota yang dimaksud sudah ada...');
+                tanggal_lahir = moment(req.param('tanggal_lahir')).format("YYYY-MM-DD");
+                res.render('anggota/add', { 
+                    session_store:session_store,
+                    nama: req.param('nama'),
+                    keterangan: req.param('keterangan'),
+                    gender: req.param('gender'),
+                    tempat_lahir: req.param('tempat_lahir'),
+                    tanggal_lahir: tanggal_lahir,
+                    email: req.param('email'),
+                    telepon: req.param('telepon'),
+                });
+            }
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        tanggal_lahir = moment(req.param('tanggal_lahir')).format("YYYY-MM-DD");
+        req.flash('msg_error', errors_detail);
+        res.render('anggota/add', {
+            session_store: session_store, 
+            nama: req.param('nama'),
+            keterangan: req.param('keterangan'),
+            gender: req.param('gender'),
+            tempat_lahir: req.param('tempat_lahir'),
+            tanggal_lahir: tanggal_lahir,
+            email: req.param('email'),
+            telepon: req.param('telepon'),
+        });
+    }
+});
+
+
+router.get('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findOne({_id:req.params.id}, function (err, row){
+        if (row)
+        {
+            console.log(row);
+
+            tanggal_lahir = moment(row.tanggal_lahir).format("YYYY-MM-DD");
+            res.render('anggota/edit', { session_store:session_store, anggota: row});
+        }
+        else
+        {
+            req.flash('msg_error', 'Punten, anggota tidak ditemukan!');
+            res.redirect('/anggota');
+        }
+    });
+});
+
+// EDIT
+
+router.put('/edit/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    req.assert('nama', 'Nama diperlukan').notEmpty();
+    req.assert('tempat_lahir', 'Tempat lahir diperlukan').notEmpty();
+    req.assert('tanggal_lahir', 'Tanggal lahir diperlukan').notEmpty();
+    req.assert('email', 'E-Mail diperlukan').isEmail().withMessage('E-mail tidak valid').notEmpty();
+    req.assert('telepon', 'Telepon diperlukan').notEmpty();
+
+    var errors = req.validationErrors();  
+    console.log(errors);
+
+    if (!errors)
+    {
+        v_nama = req.sanitize( 'nama' ).escape().trim();
+        v_gender = req.sanitize('gender').escape().trim();
+        v_keterangan = req.sanitize( 'keterangan' ).escape().trim();
+        v_tempat_lahir = req.sanitize('tempat_lahir').escape().trim();
+        v_tanggal_lahir = req.sanitize('tanggal_lahir').escape().trim();
+        v_email = req.sanitize('email').escape().trim();
+        v_telepon = req.sanitize('telepon').escape().trim();
+
+        Anggota.findById(req.params.id, function (err, row){
+
+            row.nama = v_nama;
+            row.keterangan = v_keterangan;
+            row.gender = v_gender;
+            row.tempat_lahir = v_tempat_lahir;
+            row.tanggal_lahir = v_tanggal_lahir;
+            row.email = v_email;
+            row.telepon = v_telepon;
+
+            row.save(function(err) {
+                if (err) 
+                {
+                    console.log(err);
+
+                    req.flash('msg_error', 'Punten, sepertinya ada masalah dengan sistem kami...');
+                    res.redirect('/anggota/edit/'+req.params.id);
+                }
+                else
+                {
+                    req.flash('msg_info', 'Edit anggota berhasil...');
+                }
+
+                res.redirect('/anggota/'+req.params.id);
+
+            });
+        });
+    }
+    else
+    {   
+        // menampilkan pesan error
+        errors_detail = "<p>Punten, sepertinya ada salah pengisian, mangga check lagi formnyah!</p><ul>";
+
+        for (i in errors)
+        {
+            error = errors[i];
+            errors_detail += '<li>'+error.msg+'</li>';
+        }
+
+        errors_detail += "</ul>";
+
+        console.log(req.params.id);
+
+        tanggal_lahir = moment(req.param('tanggal_lahir')).format("YYYY-MM-DD");
+        req.flash('msg_error', errors_detail);
+        res.render('anggota/edit', {
+            anggota: {},
+            session_store: session_store, 
+            nama: req.param('nama'),
+            keterangan: req.param('keterangan'),
+            gender: req.param('gender'),
+            tempat_lahir: req.param('tempat_lahir'),
+            tanggal_lahir: tanggal_lahir,
+            email: req.param('email'),
+            telepon: req.param('telepon'),
+            anggota_id: req.params.id,
+        });
+    }
+});
+
+// DELETE
+
+router.delete('/delete/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    Anggota.findById(req.params.id, function(err, row){
+        row.remove(function(err, user){
+            if (err) 
+            {
+                console.log(err);
+                req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            }
+            else
+            {
+                req.flash('msg_info', 'Hapus anggota berhasil!');
+            }
+            res.redirect('/anggota');
+        });
+    });
+});
+
+
+// KONTAK
+
+router.get('/kontak/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            res.render('anggota/kontak', {session_store: session_store, anggota: row})
+        }
+    });
+});
+
+router.post('/kontak/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            v_kontak = req.sanitize( 'kontak' ).escape().trim();
+            v_types = req.sanitize( 'types' ).escape().trim();
+
+            row.kontak.push({kontak: v_kontak, types: v_types});
+            row.save();
+
+            res.redirect('/anggota/kontak/'+req.params.id);
+        }
+    });
+});
+
+router.delete('/kontak/(:id)/delete/(:kontak_id)', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            row.kontak.pull({_id: req.params.kontak_id});
+            row.save();
+
+            res.redirect('/anggota/kontak/'+req.params.id);
+        }
+    });
+});
+
+// ALAMAT
+
+router.get('/alamat/(:id)',  Auth_mdw.check_login, Auth_mdw.is_admin, function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            res.render('anggota/alamat', {session_store: session_store, anggota: row})
+        }
+    });
+});
+
+router.post('/alamat/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            v_alamat = req.sanitize( 'alamat' ).escape().trim();
+            v_types = req.sanitize( 'types' ).escape().trim();
+
+            row.alamat.push({alamat: v_alamat, types: v_types});
+            row.save();
+
+            res.redirect('/anggota/alamat/'+req.params.id);
+        }
+    });
+});
+
+router.delete('/alamat/(:id)/delete/(:alamat_id)', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            row.alamat.pull({_id: req.params.alamat_id});
+            row.save();
+
+            res.redirect('/anggota/alamat/'+req.params.id);
+        }
+    });
+});
+
+// DETAIL ANGGOTA
+router.get('/(:id)', Auth_mdw.check_login, Auth_mdw.is_admin,  function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            res.render('anggota/detail', {session_store: session_store, anggota: row, moment: moment})
+        }
+    });
+});
+
+module.exports = router;
+
+
+
+## 
+Sebelum masuk ke query, kita konfigurasi terlebih dahulu untuk menghitung pagination yang akan 
+ditampilkan. Mulai dari offset dan banyaknya item yang akan ditampilkan. Setelah query mengambil 
+dokumen, kita eksekusi di dalamnya query untuk menghitung semua dokumen yang ada di collection anggota. 
+Dan kita racik elemen pagination yang akan ditampilkan dengan cukup rumit. Kode tersebut merupakan 
+adaptasi dari contoh kode yang ada di dokumentasi resmi NPM pagination. Anda dapat melihatnya untuk 
+melihat contoh lainnya.
+
+4. Barulah kita tampilkan paginator di halaman index anggota. Lalu untuk view anggota/index.jade 
+sekarang berubah menjadi seperti ini:
+
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Daftar Anggota
+            small Kelola anggota organisasi Anda disini
+    // Main content
+    section.content
+        .row
+            .col-xs-12
+                - if (messages.msg_error)
+                    .alert.alert-danger.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title Anggota
+                        .box-tools
+                            a(href="/anggota/add").btn.btn-primary.btn-sm
+                                i.glyphicon.glyphicon-plus  
+                                | &nbsp; Tambah Anggota
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                th No.
+                                th Nama
+                                th Info
+                                th Action
+                            tbody
+                                for row, index in anggota
+                                    tr
+                                        td #{index + offset + 1}
+                                        td #{row.nama}
+                                        td #{row.keterangan}
+                                        td(style="width:100px;")
+                                            div(style="display:inline-block;margin-right:5px;")
+                                                a(href="/anggota/#{row._id}").btn.btn-primary.btn-xs
+                                                    i.glyphicon.glyphicon-eye-open
+                                            div(style="display:inline-block")
+                                                form(method="POST", action="/anggota/delete/#{row._id}")
+                                                    input(type="hidden", name="_method", value="DELETE")
+                                                    button(type="submit").btn.btn-danger.btn-xs
+                                                        i.glyphicon.glyphicon-trash
+
+                    // /.box-body
+                    .box-footer.clearfix
+                        !{paginator}
+                // /.box
+    // /.content
+
+
+## diatas ditambahkan fungsi pagination
+ .box-footer.clearfix
+                        !{paginator}
+
+5. Upload Foto di Halaman Detail Anggota
+
+- Masuk kembali ke halaman detail anggota, kita akan mengubah sedikit 
+kode views/anggota/detail.jade untuk menampilkan shortcut dan panel ganti foto. 
+Silahkan ubah kode view anggota/deetail.jade tersebut menjadi seperti berikut:
+
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Detail Anggota
+            small Anda dapat melihat detail anggota disini
+    // Main content
+    section.content
+        .row
+            .col-xs-8
+                - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_error}
+                - if (messages.msg_info)
+                    .alert.alert-success.alert-dismissable
+                        button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                        | #{messages.msg_info}
+                .box
+                    .box-header
+                        h3.box-title #{anggota.nama}
+                        .box-tools
+                            div(style="display:inline-block; margin-right:5px;")
+                                a(href="/anggota/edit/#{anggota.id}").btn.btn-success.btn-sm
+                                    i.glyphicon.glyphicon-pencil  
+                                    | &nbsp; Edit
+                            div(style="display:inline-block")
+                                form(method="POST", action="/anggota/delete/#{anggota._id}")
+                                    input(type="hidden", name="_method", value="DELETE")
+                                    button(type="submit").btn.btn-danger.btn-sm
+                                        i.glyphicon.glyphicon-trash Hapus
+                    // /.box-header
+                    .box-body
+
+                        ul
+                            li tempat / tanggal lahir: #{anggota.tempat_lahir} / #{anggota.tanggal_lahir}
+                            li gender: #{anggota.gender}
+                            li e-mail: #{anggota.email}
+                            li telepon: #{anggota.telepon}
+                        p #{anggota.keterangan}
+                    // /.box-body
+                // /.box
+            .col-xs-4
+                .box
+                    .box-header
+                        h3.box-title Foto
+                        .box-tools
+                            a(href="/anggota/change_profile_picture/#{anggota.id}").btn.btn-success.btn-sm
+                                i.glyphicon.glyphicon-picture  
+                                | &nbsp; Change Photo
+                            | &nbsp;
+                    // /.box-header
+                    .box-body
+                        div(style="text-align:center;")
+                            img(src="/uploads/#{anggota.propic_path}", style="height:125px;")
+                    // /.box-body
+                // /.box
+        .row
+            .col-xs-6
+                .box
+                    .box-header
+                            h3.box-title Kontak
+                            .box-tools
+                                a(href="/anggota/kontak/#{anggota.id}").btn.btn-success.btn-sm
+                                    i.glyphicon.glyphicon-pencil  
+                                    | &nbsp; Edit
+                                | &nbsp;
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                tr
+                                    td No.
+                                    td Kontak
+                                    td Tipe
+                            tbody
+                                for row, index in anggota.kontak
+                                    tr
+                                        td #{index+1}
+                                        td #{row.kontak}
+                                        td #{row.types}
+            .col-xs-6
+                .box
+                    .box-header
+                        h3.box-title Alamat
+                        .box-tools
+                            a(href="/anggota/alamat/#{anggota.id}").btn.btn-success.btn-sm
+                                i.glyphicon.glyphicon-pencil  
+                                | &nbsp; Edit
+                            | &nbsp;
+                    // /.box-header
+                    .box-body.table-responsive.no-padding
+                        table.table.table-striped
+                            thead
+                                tr
+                                    td No.
+                                    td Alamat
+                                    td Tipe
+                            tbody
+                                for row, index in anggota.alamat
+                                    tr
+                                        td #{index+1}
+                                        td #{row.alamat}
+                                        td #{row.types}
+                // /.box
+    // /.content
+
+
+# Pada kode diatas, kita hanya menambahkan panel ganti foto di sebelah kanan panel detail anggota. 
+
+6. Membuat Form Upload Foto
+
+- Setelah menambahkan panel ganti foto, sekarang kita buat form untuk ganti foto. 
+- buat file views/anggota/change_photo.jade lalu isikan :
+
+extends ../layout/base
+block content  
+    section.content-header
+        h1
+            | Ganti Foto Anggota
+            small Ganti foto anggota organisasi Anda disini
+    // Main content
+    section.content
+        // Your Page Content Here
+        // /.row
+        .row
+            .col-xs-12
+                .box
+                    .box-header
+                        h3.box-title Upload Foto
+                    // /.box-header
+                    .box-body
+                        - if (messages.msg_error)
+                            .alert.alert-danger.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | !{messages.msg_error}
+                        - if (messages.msg_info)
+                            .alert.alert-success.alert-dismissable
+                                button.close(type='button', data-dismiss='alert', aria-hidden='true') ×
+                                | #{messages.msg_info}
+                        form(action="/anggota/change_profile_picture/#{anggota_id}", method="POST", role="form", enctype="multipart/form-data").form-horizontal
+                            .form-group
+                                label(for="nama").col-md-3.control-label Pilih Foto Baru
+                                .col-md-6
+                                    input(type="file", name="nama", id="nama", value="").form-control
+                            .form-group
+                                .col-sm-offset-3.col-sm-6
+                                    button(type="submit").btn.btn-primary
+                                        i.fa.fa-save
+                                        | &nbsp; Simpan
+                                    | &nbsp;
+                                    a(href="/anggota").btn.btn-danger Batal
+
+                    // /.box-body
+                // /.box
+    // /.content
+
+
+7. kita buat route "/change_profile_picture/(:id)" untuk menampilkan form ganti foto tersebut. 
+buka routes/anggota.js tambahkan :
+
+router.get('/change_profile_picture/(:id)', function(req, res, next){
+    session_store = req.session;
+
+    res.render('anggota/change_photo', {session_store: session_store, anggota_id: req.params.id})
+});
+
+router.get('/(:id)', function(req, res, next){
+    session_store = req.session;
+
+    Anggota.findById(req.params.id, function(err, row){
+        if (err) 
+        {
+            console.log(err);
+            req.flash('msg_error', 'Punten, sepertinya anggota yang dimaksud sudah tidak ada. Dan kebetulan lagi ada masalah sama sistem kami :D');
+            res.redirect('/anggota');
+        }
+        else
+        {
+            res.render('anggota/detail', {session_store: session_store, anggota: row})
+        }
+    });
+});
+
+
+8. Proses Upload Foto
+
+- Untuk menangani proses upload file, kita harus membuat lagi route dengan metode POST. 
+Di dalamnya akan ada penggunaan formidable untuk membaca file yang dikirimkan dari form dan 
+akan disimpan ke folder public/uploads dengan bantuan modul fs. Path yang didapatkan 
+dari pembacaan oleh formidable, akan disimpan di dalam field propic_path yang ada 
+di dalam model models/anggota.js.
+
+- Silahkan tambahkan route ganti foto dengan metode POST buka routes/anggota.js tambahkan :
+
+router.post('/change_profile_picture/(:id)', function(req, res, next){
+    session_store = req.session;
+
+    var form = new formidable.IncomingForm();
+
+    form.parse(req, function(err, fields, files) {
+        if (err)
+        {
+            console.log(err);
+        }
+        else
+        {
+            console.log(files.nama);
+            var tmp_path = files.nama.path;
+            var upload_path = './public/uploads/'+files.nama.name;
+
+            fs.rename(tmp_path, upload_path, function(err){
+                if (err) 
+                {
+                    console.log(err);
+                }
+
+                Anggota.findById(req.params.id, function(err, row){
+                    row.propic_path = files.nama.name;
+                    row.save();
+
+                });
+
+                res.redirect('/anggota/'+req.params.id);
+
+                fs.unlink(tmp_path, function(){
+                    if (err)
+                    {
+                        console.log(err);
+                    }
+                });
+
+            })
+        }
+    });
+
+});
+
+### PENUTUP ###
+Di tutorial yang keenam ini kita masih memantapkan diri untuk membuat CRUD yang lebih kompleks 
+daripada CRUD sebelumnya. Di tutorial berikutnya, kita akan mencoba untuk membuat fitur upload foto 
+anggota dan menambahkan pagination di halaman daftar anggota. Tentunya fitur tersebut akan semakin 
+menarik bila kita pelajari.
